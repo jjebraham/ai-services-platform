@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Services Platform - Complete System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+    <div id="root">
+        <!-- Loading Screen -->
+        <div id="loadingScreen" class="min-h-screen bg-gray-50 flex items-center justify-center">
+            <div class="text-center">
+                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                <p class="text-gray-600">Loading AI Services Platform...</p>
+            </div>
+        </div>
+
+        <!-- Landing Page -->
+        <div id="landingPage" class="min-h-screen bg-gray-50 flex items-center justify-center hidden">
+            <div class="text-center">
+                <h1 class="text-4xl font-bold text-gray-900 mb-4">AI Services Platform</h1>
+                <p class="text-lg text-gray-600 mb-8">Access Premium AI Tools with Supabase Integration</p>
+                <div class="space-x-4">
+                    <button id="getStartedBtn" class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors duration-200">Get Started</button>
+                    <button id="loginBtn" class="border border-gray-300 text-gray-700 px-6 py-3 rounded-lg hover:bg-gray-50 transition-colors duration-200">Login</button>
+                    <button id="adminBtn" class="bg-red-600 text-white px-6 py-3 rounded-lg hover:bg-red-700 transition-colors duration-200">Admin</button>
+                </div>
+                <div id="statusMessage" class="mt-8 hidden">
+                    <p class="text-sm text-green-600">✅ Action completed successfully!</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Login Page -->
+        <div id="loginPage" class="min-h-screen bg-gray-50 flex items-center justify-center hidden">
+            <div class="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
+                <h2 class="text-2xl font-bold text-gray-900 mb-6 text-center">Login to Your Account</h2>
+                <form id="loginForm" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                        <input type="email" id="loginEmail" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter your email" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                        <input type="password" id="loginPassword" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter your password" required>
+                    </div>
+                    <button type="submit" class="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors">Login</button>
+                </form>
+                <div class="mt-4 text-center">
+                    <button id="backToLandingBtn" class="text-gray-500 hover:text-gray-700">Back to Home</button>
+                </div>
+                <div id="loginError" class="mt-4 hidden">
+                    <p class="text-sm text-red-600"></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Register Modal -->
+        <div id="registerModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+            <div class="bg-white rounded-lg p-8 max-w-md w-full mx-4">
+                <h2 class="text-2xl font-bold text-gray-900 mb-4">Create Your Account</h2>
+                <form id="registerForm" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+                        <input type="text" id="registerFullName" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter your full name" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                        <input type="email" id="registerEmail" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter your email" required>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                        <input type="password" id="registerPassword" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Create a password (min 6 characters)" required>
+                    </div>
+                    <button type="submit" class="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors">Create Account</button>
+                </form>
+                <button id="closeRegisterModal" class="mt-4 w-full text-gray-500 hover:text-gray-700">Cancel</button>
+                <div id="registerError" class="mt-4 hidden">
+                    <p class="text-sm text-red-600"></p>
+                </div>
+                <div id="registerSuccess" class="mt-4 hidden">
+                    <p class="text-sm text-green-600"></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Dashboard -->
+        <div id="dashboard" class="min-h-screen bg-gray-50 hidden">
+            <!-- Navigation -->
+            <nav class="bg-white shadow-sm border-b">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div class="flex justify-between h-16">
+                        <div class="flex items-center">
+                            <h1 class="text-xl font-semibold text-gray-900">AI Services Dashboard</h1>
+                        </div>
+                        <div class="flex items-center space-x-4">
+                            <span id="userWelcome" class="text-gray-700"></span>
+                            <button id="logoutBtn" class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors">Logout</button>
+                        </div>
+                    </div>
+                </div>
+            </nav>
+
+            <!-- Dashboard Content -->
+            <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+                <div class="px-4 py-6 sm:px-0">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <!-- AI Services Card -->
+                        <div class="bg-white overflow-hidden shadow rounded-lg">
+                            <div class="p-5">
+                                <div class="flex items-center">
+                                    <div class="flex-shrink-0">
+                                        <div class="w-8 h-8 bg-blue-500 rounded-md flex items-center justify-center">
+                                            <span class="text-white text-sm">🤖</span>
+                                        </div>
+                                    </div>
+                                    <div class="ml-5 w-0 flex-1">
+                                        <dl>
+                                            <dt class="text-sm font-medium text-gray-500 truncate">AI Services</dt>
+                                            <dd class="text-lg font-medium text-gray-900">6 Available</dd>
+                                        </dl>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="bg-gray-50 px-5 py-3">
+                                <div class="text-sm">
+                                    <button class="font-medium text-blue-600 hover:text-blue-500">View all services</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Account Status Card -->
+                        <div class="bg-white overflow-hidden shadow rounded-lg">
+                            <div class="p-5">
+                                <div class="flex items-center">
+                                    <div class="flex-shrink-0">
+                                        <div class="w-8 h-8 bg-green-500 rounded-md flex items-center justify-center">
+                                            <span class="text-white text-sm">✓</span>
+                                        </div>
+                                    </div>
+                                    <div class="ml-5 w-0 flex-1">
+                                        <dl>
+                                            <dt class="text-sm font-medium text-gray-500 truncate">Account Status</dt>
+                                            <dd class="text-lg font-medium text-gray-900">Active</dd>
+                                        </dl>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="bg-gray-50 px-5 py-3">
+                                <div class="text-sm">
+                                    <button class="font-medium text-green-600 hover:text-green-500">Manage account</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Database Status Card -->
+                        <div class="bg-white overflow-hidden shadow rounded-lg">
+                            <div class="p-5">
+                                <div class="flex items-center">
+                                    <div class="flex-shrink-0">
+                                        <div id="dbStatusIcon" class="w-8 h-8 bg-gray-500 rounded-md flex items-center justify-center">
+                                            <span class="text-white text-sm">🗄️</span>
+                                        </div>
+                                    </div>
+                                    <div class="ml-5 w-0 flex-1">
+                                        <dl>
+                                            <dt class="text-sm font-medium text-gray-500 truncate">Database</dt>
+                                            <dd id="dbStatusText" class="text-lg font-medium text-gray-900">Checking...</dd>
+                                        </dl>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="bg-gray-50 px-5 py-3">
+                                <div class="text-sm">
+                                    <span id="dbStatusDetail" class="text-gray-600">Supabase integration</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Recent Activity -->
+                    <div class="mt-8">
+                        <div class="bg-white shadow rounded-lg">
+                            <div class="px-4 py-5 sm:p-6">
+                                <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Welcome to Your Dashboard</h3>
+                                <div class="text-gray-600">
+                                    <p class="mb-4">You have successfully logged in to the AI Services Platform. Your account is connected to our Supabase database.</p>
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div class="bg-blue-50 p-4 rounded-lg">
+                                            <h4 class="font-semibold text-blue-900 mb-2">Getting Started</h4>
+                                            <ul class="text-sm text-blue-700 space-y-1">
+                                                <li>• Explore available AI services</li>
+                                                <li>• Try our interactive demos</li>
+                                                <li>• Upgrade to premium features</li>
+                                            </ul>
+                                        </div>
+                                        <div class="bg-green-50 p-4 rounded-lg">
+                                            <h4 class="font-semibold text-green-900 mb-2">Account Features</h4>
+                                            <ul class="text-sm text-green-700 space-y-1">
+                                                <li>• Secure Supabase authentication</li>
+                                                <li>• Real-time data synchronization</li>
+                                                <li>• Persistent user sessions</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Admin Panel -->
+        <div id="adminPanel" class="min-h-screen bg-gray-50 hidden">
+            <nav class="bg-white shadow-sm border-b">
+                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                    <div class="flex justify-between h-16">
+                        <div class="flex items-center">
+                            <h1 class="text-xl font-semibold text-gray-900">Admin Panel - Supabase Configuration</h1>
+                        </div>
+                        <div class="flex items-center">
+                            <button id="backToLandingFromAdmin" class="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors">Back to Home</button>
+                        </div>
+                    </div>
+                </div>
+            </nav>
+
+            <div class="max-w-4xl mx-auto py-6 sm:px-6 lg:px-8">
+                <!-- Supabase Configuration -->
+                <div class="bg-white shadow rounded-lg mb-6">
+                    <div class="px-4 py-5 sm:p-6">
+                        <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">Supabase Database Configuration</h3>
+                        
+                        <!-- Status Display -->
+                        <div id="supabaseStatus" class="mb-6 p-4 rounded-lg bg-gray-50">
+                            <h4 class="font-semibold text-gray-900 mb-2">Current Status</h4>
+                            <div id="statusContent" class="text-sm text-gray-600">
+                                <p>Loading configuration status...</p>
+                            </div>
+                        </div>
+
+                        <!-- Configuration Form -->
+                        <form id="supabaseConfigForm" class="space-y-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Supabase URL</label>
+                                <input type="url" id="supabaseUrl" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="https://your-project.supabase.co" required>
+                                <p class="text-xs text-gray-500 mt-1">Your Supabase project URL</p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Anon Key</label>
+                                <input type="text" id="supabaseAnonKey" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." required>
+                                <p class="text-xs text-gray-500 mt-1">Public anon key from Supabase dashboard</p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Service Role Key (Optional)</label>
+                                <input type="text" id="supabaseServiceKey" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...">
+                                <p class="text-xs text-gray-500 mt-1">Service role key for admin operations (optional)</p>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Admin Key</label>
+                                <input type="password" id="adminKey" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter admin key" required>
+                                <p class="text-xs text-gray-500 mt-1">Required for admin operations</p>
+                            </div>
+                            <button type="submit" class="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors">Configure Supabase</button>
+                        </form>
+
+                        <div id="configResult" class="mt-4 hidden">
+                            <div class="p-4 rounded-lg">
+                                <p class="text-sm"></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- User Management -->
+                <div class="bg-white shadow rounded-lg">
+                    <div class="px-4 py-5 sm:p-6">
+                        <h3 class="text-lg leading-6 font-medium text-gray-900 mb-4">User Management</h3>
+                        <div id="usersList" class="space-y-2">
+                            <p class="text-gray-600">Configure Supabase first to view users.</p>
+                        </div>
+                        <button id="refreshUsers" class="mt-4 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors">Refresh Users</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Application state
+        let currentUser = null;
+        let supabaseClient = null;
+
+        // API base URL
+        const API_BASE = window.location.origin;
+
+        // Initialize application
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeApp();
+            setupEventListeners();
+        });
+
+        async function initializeApp() {
+            // Check authentication status
+            const authStatus = await checkAuthStatus();
+            
+            // Hide loading screen
+            document.getElementById('loadingScreen').classList.add('hidden');
+            
+            // Show appropriate page
+            if (authStatus.supabaseConfigured) {
+                document.getElementById('landingPage').classList.remove('hidden');
+                updateDatabaseStatus(true);
+            } else {
+                document.getElementById('landingPage').classList.remove('hidden');
+                updateDatabaseStatus(false);
+            }
+        }
+
+        function setupEventListeners() {
+            // Landing page buttons
+            document.getElementById('getStartedBtn').addEventListener('click', () => {
+                document.getElementById('registerModal').classList.remove('hidden');
+            });
+
+            document.getElementById('loginBtn').addEventListener('click', () => {
+                showLoginPage();
+            });
+
+            document.getElementById('adminBtn').addEventListener('click', () => {
+                showAdminPanel();
+            });
+
+            // Register modal
+            document.getElementById('registerForm').addEventListener('submit', handleRegister);
+            document.getElementById('closeRegisterModal').addEventListener('click', () => {
+                document.getElementById('registerModal').classList.add('hidden');
+            });
+
+            // Login page
+            document.getElementById('loginForm').addEventListener('submit', handleLogin);
+            document.getElementById('backToLandingBtn').addEventListener('click', () => {
+                showLandingPage();
+            });
+
+            // Dashboard
+            document.getElementById('logoutBtn').addEventListener('click', handleLogout);
+
+            // Admin panel
+            document.getElementById('supabaseConfigForm').addEventListener('submit', handleSupabaseConfig);
+            document.getElementById('backToLandingFromAdmin').addEventListener('click', () => {
+                showLandingPage();
+            });
+            document.getElementById('refreshUsers').addEventListener('click', loadUsers);
+        }
+
+        // Page navigation functions
+        function showLandingPage() {
+            hideAllPages();
+            document.getElementById('landingPage').classList.remove('hidden');
+        }
+
+        function showLoginPage() {
+            hideAllPages();
+            document.getElementById('loginPage').classList.remove('hidden');
+        }
+
+        function showDashboard() {
+            hideAllPages();
+            document.getElementById('dashboard').classList.remove('hidden');
+            if (currentUser) {
+                document.getElementById('userWelcome').textContent = `Welcome, ${currentUser.fullName}!`;
+            }
+        }
+
+        function showAdminPanel() {
+            hideAllPages();
+            document.getElementById('adminPanel').classList.remove('hidden');
+            loadSupabaseStatus();
+        }
+
+        function hideAllPages() {
+            document.getElementById('landingPage').classList.add('hidden');
+            document.getElementById('loginPage').classList.add('hidden');
+            document.getElementById('dashboard').classList.add('hidden');
+            document.getElementById('adminPanel').classList.add('hidden');
+        }
+
+        // Authentication functions
+        async function handleRegister(e) {
+            e.preventDefault();
+            
+            const fullName = document.getElementById('registerFullName').value;
+            const email = document.getElementById('registerEmail').value;
+            const password = document.getElementById('registerPassword').value;
+
+            if (password.length < 6) {
+                showError('registerError', 'Password must be at least 6 characters long');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/api/auth/register`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ fullName, email, password })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showSuccess('registerSuccess', 'Account created successfully! You can now login.');
+                    document.getElementById('registerForm').reset();
+                    setTimeout(() => {
+                        document.getElementById('registerModal').classList.add('hidden');
+                        showLoginPage();
+                    }, 2000);
+                } else {
+                    showError('registerError', result.error);
+                }
+            } catch (error) {
+                showError('registerError', 'Registration failed. Please try again.');
+            }
+        }
+
+        async function handleLogin(e) {
+            e.preventDefault();
+            
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+
+            try {
+                const response = await fetch(`${API_BASE}/api/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({ email, password })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    currentUser = result.user;
+                    showDashboard();
+                    checkDatabaseStatus();
+                } else {
+                    showError('loginError', result.error);
+                }
+            } catch (error) {
+                showError('loginError', 'Login failed. Please try again.');
+            }
+        }
+
+        async function handleLogout() {
+            try {
+                const response = await fetch(`${API_BASE}/api/auth/logout`, {
+                    method: 'POST',
+                    credentials: 'include'
+                });
+
+                currentUser = null;
+                showLandingPage();
+            } catch (error) {
+                console.error('Logout error:', error);
+            }
+        }
+
+        // Admin functions
+        async function handleSupabaseConfig(e) {
+            e.preventDefault();
+            
+            const supabaseUrl = document.getElementById('supabaseUrl').value;
+            const supabaseAnonKey = document.getElementById('supabaseAnonKey').value;
+            const supabaseServiceKey = document.getElementById('supabaseServiceKey').value;
+            const adminKey = document.getElementById('adminKey').value;
+
+            try {
+                const response = await fetch(`${API_BASE}/api/admin/supabase/configure`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Admin-Key': adminKey
+                    },
+                    body: JSON.stringify({
+                        supabaseUrl,
+                        supabaseAnonKey,
+                        supabaseServiceKey
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showConfigResult('Configuration successful! Supabase is now connected.', 'success');
+                    loadSupabaseStatus();
+                    loadUsers();
+                } else {
+                    showConfigResult(result.error, 'error');
+                }
+            } catch (error) {
+                showConfigResult('Configuration failed. Please try again.', 'error');
+            }
+        }
+
+        async function loadSupabaseStatus() {
+            try {
+                const response = await fetch(`${API_BASE}/api/auth/status`);
+                const result = await response.json();
+
+                const statusContent = document.getElementById('statusContent');
+                if (result.success) {
+                    statusContent.innerHTML = `
+                        <div class="space-y-2">
+                            <p><strong>Supabase Configured:</strong> ${result.supabaseConfigured ? '✅ Yes' : '❌ No'}</p>
+                            <p><strong>Database Connection:</strong> ${result.databaseConnection.success ? '✅ Connected' : '❌ Failed'}</p>
+                            ${result.databaseConnection.error ? `<p class="text-red-600">Error: ${result.databaseConnection.error}</p>` : ''}
+                        </div>
+                    `;
+                } else {
+                    statusContent.innerHTML = '<p class="text-red-600">Failed to load status</p>';
+                }
+            } catch (error) {
+                document.getElementById('statusContent').innerHTML = '<p class="text-red-600">Error loading status</p>';
+            }
+        }
+
+        async function loadUsers() {
+            const adminKey = document.getElementById('adminKey').value;
+            if (!adminKey) {
+                document.getElementById('usersList').innerHTML = '<p class="text-red-600">Admin key required</p>';
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/api/admin/users`, {
+                    headers: {
+                        'X-Admin-Key': adminKey
+                    }
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    const usersList = document.getElementById('usersList');
+                    if (result.users.length === 0) {
+                        usersList.innerHTML = '<p class="text-gray-600">No users found</p>';
+                    } else {
+                        usersList.innerHTML = result.users.map(user => `
+                            <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                                <div>
+                                    <p class="font-medium">${user.full_name}</p>
+                                    <p class="text-sm text-gray-600">${user.email}</p>
+                                    <p class="text-xs text-gray-500">Joined: ${new Date(user.created_at).toLocaleDateString()}</p>
+                                </div>
+                                <div class="text-right">
+                                    <span class="px-2 py-1 text-xs rounded-full ${user.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}">
+                                        ${user.is_active ? 'Active' : 'Inactive'}
+                                    </span>
+                                </div>
+                            </div>
+                        `).join('');
+                    }
+                } else {
+                    document.getElementById('usersList').innerHTML = `<p class="text-red-600">${result.error}</p>`;
+                }
+            } catch (error) {
+                document.getElementById('usersList').innerHTML = '<p class="text-red-600">Error loading users</p>';
+            }
+        }
+
+        // Utility functions
+        async function checkAuthStatus() {
+            try {
+                const response = await fetch(`${API_BASE}/api/auth/status`);
+                return await response.json();
+            } catch (error) {
+                return { success: false, supabaseConfigured: false };
+            }
+        }
+
+        async function checkDatabaseStatus() {
+            try {
+                const response = await fetch(`${API_BASE}/api/auth/status`);
+                const result = await response.json();
+                updateDatabaseStatus(result.supabaseConfigured && result.databaseConnection.success);
+            } catch (error) {
+                updateDatabaseStatus(false);
+            }
+        }
+
+        function updateDatabaseStatus(isConnected) {
+            const icon = document.getElementById('dbStatusIcon');
+            const text = document.getElementById('dbStatusText');
+            const detail = document.getElementById('dbStatusDetail');
+
+            if (isConnected) {
+                icon.className = 'w-8 h-8 bg-green-500 rounded-md flex items-center justify-center';
+                text.textContent = 'Connected';
+                detail.textContent = 'Supabase active';
+            } else {
+                icon.className = 'w-8 h-8 bg-red-500 rounded-md flex items-center justify-center';
+                text.textContent = 'Not configured';
+                detail.textContent = 'Setup required';
+            }
+        }
+
+        function showError(elementId, message) {
+            const errorElement = document.getElementById(elementId);
+            errorElement.querySelector('p').textContent = message;
+            errorElement.classList.remove('hidden');
+            setTimeout(() => {
+                errorElement.classList.add('hidden');
+            }, 5000);
+        }
+
+        function showSuccess(elementId, message) {
+            const successElement = document.getElementById(elementId);
+            successElement.querySelector('p').textContent = message;
+            successElement.classList.remove('hidden');
+            setTimeout(() => {
+                successElement.classList.add('hidden');
+            }, 5000);
+        }
+
+        function showConfigResult(message, type) {
+            const resultElement = document.getElementById('configResult');
+            const messageElement = resultElement.querySelector('p');
+            
+            messageElement.textContent = message;
+            resultElement.className = `mt-4 p-4 rounded-lg ${type === 'success' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'}`;
+            resultElement.classList.remove('hidden');
+            
+            setTimeout(() => {
+                resultElement.classList.add('hidden');
+            }, 5000);
+        }
+    </script>
+</body>
+</html>

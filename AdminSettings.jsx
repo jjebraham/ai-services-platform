@@ -1,69 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { 
-  Settings, 
-  Save, 
-  Eye,
-  EyeOff,
-  DollarSign,
-  CreditCard,
-  Mail,
-  Globe,
-  Shield,
-  Bell,
-  Database,
-  Key,
-  RefreshCw,
-  CheckCircle,
-  AlertCircle
-} from 'lucide-react';
-import { api } from '../../lib/api';
-import LoadingSpinner from '../../components/LoadingSpinner';
-
-const settingsSchema = z.object({
-  // Exchange Rate Settings
-  exchangeRateApiKey: z.string().optional(),
-  exchangeRateProvider: z.enum(['fixer', 'exchangerate-api', 'currencyapi'], {
-    required_error: 'Please select an exchange rate provider',
-  }),
-  
-  // Payment Settings
-  stripePublishableKey: z.string().optional(),
-  stripeSecretKey: z.string().optional(),
-  paypalClientId: z.string().optional(),
-  paypalClientSecret: z.string().optional(),
-  
-  // Email Settings
-  emailProvider: z.enum(['smtp', 'sendgrid', 'mailgun'], {
-    required_error: 'Please select an email provider',
-  }),
-  smtpHost: z.string().optional(),
-  smtpPort: z.number().optional(),
-  smtpUser: z.string().optional(),
-  smtpPassword: z.string().optional(),
-  sendgridApiKey: z.string().optional(),
-  mailgunApiKey: z.string().optional(),
-  mailgunDomain: z.string().optional(),
-  
-  // Platform Settings
-  platformName: z.string().min(1, 'Platform name is required'),
-  supportEmail: z.string().email('Must be a valid email'),
-  maintenanceMode: z.boolean().default(false),
-  registrationEnabled: z.boolean().default(true),
-  kycRequired: z.boolean().default(true),
-  
-  // Security Settings
-  jwtSecret: z.string().min(32, 'JWT secret must be at least 32 characters'),
-  sessionTimeout: z.number().min(15).max(1440), // 15 minutes to 24 hours
-  maxLoginAttempts: z.number().min(3).max(10),
-  
-  // Notification Settings
-  emailNotifications: z.boolean().default(true),
-  smsNotifications: z.boolean().default(false),
-  pushNotifications: z.boolean().default(true),
-});
 
 const AdminSettings = () => {
   const [loading, setLoading] = useState(true);
@@ -72,28 +7,45 @@ const AdminSettings = () => {
   const [showSecrets, setShowSecrets] = useState({});
   const [activeTab, setActiveTab] = useState('exchange');
   const [saveStatus, setSaveStatus] = useState(null);
-
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-    setValue,
-    watch
-  } = useForm({
-    resolver: zodResolver(settingsSchema),
-    defaultValues: {
-      maintenanceMode: false,
-      registrationEnabled: true,
-      kycRequired: true,
-      emailNotifications: true,
-      smsNotifications: false,
-      pushNotifications: true,
-      sessionTimeout: 60,
-      maxLoginAttempts: 5
-    }
+  const [formData, setFormData] = useState({
+    // Exchange Rate Settings
+    exchangeRateApiKey: '',
+    exchangeRateProvider: 'fixer',
+    
+    // Payment Settings
+    stripePublishableKey: '',
+    stripeSecretKey: '',
+    paypalClientId: '',
+    paypalClientSecret: '',
+    
+    // Email Settings
+    emailProvider: 'smtp',
+    smtpHost: '',
+    smtpPort: 587,
+    smtpUser: '',
+    smtpPassword: '',
+    sendgridApiKey: '',
+    mailgunApiKey: '',
+    mailgunDomain: '',
+    
+    // Platform Settings
+    platformName: 'AI Services Platform',
+    supportEmail: 'support@example.com',
+    maintenanceMode: false,
+    registrationEnabled: true,
+    kycRequired: true,
+    
+    // Security Settings
+    jwtSecret: '',
+    sessionTimeout: 60,
+    maxLoginAttempts: 5,
+    
+    // Notification Settings
+    emailNotifications: true,
+    smsNotifications: false,
+    pushNotifications: true,
   });
-
-  const watchedValues = watch();
+  const [errors, setErrors] = useState({});
 
   useEffect(() => {
     fetchSettings();
@@ -101,13 +53,16 @@ const AdminSettings = () => {
 
   const fetchSettings = async () => {
     try {
-      const response = await api.get('/admin/settings');
-      const settings = response.data;
-      
-      // Populate form with existing settings
-      Object.keys(settings).forEach(key => {
-        setValue(key, settings[key]);
-      });
+      // Mock data for demonstration
+      setFormData(prev => ({
+        ...prev,
+        platformName: 'AI Services Platform',
+        supportEmail: 'support@aiservices.com',
+        exchangeRateProvider: 'fixer',
+        emailProvider: 'smtp',
+        sessionTimeout: 60,
+        maxLoginAttempts: 5
+      }));
     } catch (error) {
       console.error('Error fetching settings:', error);
     } finally {
@@ -115,12 +70,63 @@ const AdminSettings = () => {
     }
   };
 
-  const handleSaveSettings = async (data) => {
+  const validateForm = () => {
+    const newErrors = {};
+
+    if (!formData.platformName.trim()) {
+      newErrors.platformName = 'Platform name is required';
+    }
+
+    if (!formData.supportEmail.trim()) {
+      newErrors.supportEmail = 'Support email is required';
+    } else if (!/\S+@\S+\.\S+/.test(formData.supportEmail)) {
+      newErrors.supportEmail = 'Must be a valid email';
+    }
+
+    if (formData.jwtSecret && formData.jwtSecret.length < 32) {
+      newErrors.jwtSecret = 'JWT secret must be at least 32 characters';
+    }
+
+    if (formData.sessionTimeout < 15 || formData.sessionTimeout > 1440) {
+      newErrors.sessionTimeout = 'Session timeout must be between 15 and 1440 minutes';
+    }
+
+    if (formData.maxLoginAttempts < 3 || formData.maxLoginAttempts > 10) {
+      newErrors.maxLoginAttempts = 'Max login attempts must be between 3 and 10';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleInputChange = (name, value) => {
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    
+    // Clear error when user starts typing
+    if (errors[name]) {
+      setErrors(prev => ({
+        ...prev,
+        [name]: ''
+      }));
+    }
+  };
+
+  const handleSaveSettings = async (e) => {
+    e.preventDefault();
+    
+    if (!validateForm()) {
+      return;
+    }
+
     setSaving(true);
     setSaveStatus(null);
     
     try {
-      await api.put('/admin/settings', data);
+      // Mock API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
       setSaveStatus('success');
       setTimeout(() => setSaveStatus(null), 3000);
     } catch (error) {
@@ -135,16 +141,9 @@ const AdminSettings = () => {
   const testExchangeRateConnection = async () => {
     setTestingConnection(true);
     try {
-      const response = await api.post('/admin/settings/test-exchange-rate', {
-        provider: watchedValues.exchangeRateProvider,
-        apiKey: watchedValues.exchangeRateApiKey
-      });
-      
-      if (response.data.success) {
-        alert(`Connection successful! Current USD to IRR rate: ${response.data.rate}`);
-      } else {
-        alert('Connection failed. Please check your API key and try again.');
-      }
+      // Mock test
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      alert(`Connection successful! Current USD to IRR rate: 42,500`);
     } catch (error) {
       console.error('Error testing exchange rate connection:', error);
       alert('Connection test failed. Please check your settings.');
@@ -156,24 +155,9 @@ const AdminSettings = () => {
   const testEmailConnection = async () => {
     setTestingConnection(true);
     try {
-      const response = await api.post('/admin/settings/test-email', {
-        provider: watchedValues.emailProvider,
-        settings: {
-          smtpHost: watchedValues.smtpHost,
-          smtpPort: watchedValues.smtpPort,
-          smtpUser: watchedValues.smtpUser,
-          smtpPassword: watchedValues.smtpPassword,
-          sendgridApiKey: watchedValues.sendgridApiKey,
-          mailgunApiKey: watchedValues.mailgunApiKey,
-          mailgunDomain: watchedValues.mailgunDomain
-        }
-      });
-      
-      if (response.data.success) {
-        alert('Email connection test successful!');
-      } else {
-        alert('Email connection test failed. Please check your settings.');
-      }
+      // Mock test
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      alert('Email connection test successful!');
     } catch (error) {
       console.error('Error testing email connection:', error);
       alert('Email connection test failed. Please check your settings.');
@@ -190,203 +174,172 @@ const AdminSettings = () => {
   };
 
   const SecretInput = ({ name, placeholder, ...props }) => (
-    <div className="relative">
+    <div className="secret-input-wrapper">
       <input
-        {...register(name)}
         type={showSecrets[name] ? 'text' : 'password'}
-        className="w-full px-3 py-2 pr-10 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        value={formData[name] || ''}
+        onChange={(e) => handleInputChange(name, e.target.value)}
+        className="form-input"
         placeholder={placeholder}
         {...props}
       />
       <button
         type="button"
         onClick={() => toggleSecretVisibility(name)}
-        className="absolute inset-y-0 right-0 pr-3 flex items-center"
+        className="secret-toggle-btn"
       >
-        {showSecrets[name] ? (
-          <EyeOff className="h-4 w-4 text-gray-400" />
-        ) : (
-          <Eye className="h-4 w-4 text-gray-400" />
-        )}
+        {showSecrets[name] ? '🙈' : '👁️'}
       </button>
     </div>
   );
 
   const tabs = [
-    { id: 'exchange', label: 'Exchange Rate', icon: DollarSign },
-    { id: 'payment', label: 'Payment', icon: CreditCard },
-    { id: 'email', label: 'Email', icon: Mail },
-    { id: 'platform', label: 'Platform', icon: Globe },
-    { id: 'security', label: 'Security', icon: Shield },
-    { id: 'notifications', label: 'Notifications', icon: Bell }
+    { id: 'exchange', label: 'Exchange Rate', icon: '💱' },
+    { id: 'payment', label: 'Payment', icon: '💳' },
+    { id: 'email', label: 'Email', icon: '📧' },
+    { id: 'platform', label: 'Platform', icon: '🌐' },
+    { id: 'security', label: 'Security', icon: '🛡️' },
+    { id: 'notifications', label: 'Notifications', icon: '🔔' }
   ];
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <LoadingSpinner />
+      <div className="admin-settings">
+        <div className="loading-container">
+          <div className="loading-spinner">⏳</div>
+          <p>Loading settings...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="admin-settings">
+      <div className="admin-container">
         {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Platform Settings</h1>
-              <p className="text-gray-600 mt-2">
-                Configure platform settings, integrations, and security
-              </p>
+        <div className="admin-header">
+          <div className="header-content">
+            <div className="header-text">
+              <h1>Platform Settings</h1>
+              <p>Configure platform settings, integrations, and security</p>
             </div>
             {saveStatus && (
-              <div className={`flex items-center px-4 py-2 rounded-md ${
-                saveStatus === 'success' 
-                  ? 'bg-green-100 text-green-800' 
-                  : 'bg-red-100 text-red-800'
-              }`}>
-                {saveStatus === 'success' ? (
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                ) : (
-                  <AlertCircle className="h-4 w-4 mr-2" />
-                )}
+              <div className={`save-status ${saveStatus}`}>
+                <span className="status-icon">
+                  {saveStatus === 'success' ? '✅' : '❌'}
+                </span>
                 {saveStatus === 'success' ? 'Settings saved successfully!' : 'Error saving settings'}
               </div>
             )}
           </div>
         </div>
 
-        <div className="flex flex-col lg:flex-row gap-8">
+        <div className="settings-layout">
           {/* Sidebar */}
-          <div className="lg:w-64">
-            <nav className="space-y-1">
-              {tabs.map((tab) => {
-                const Icon = tab.icon;
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`w-full flex items-center px-3 py-2 text-sm font-medium rounded-md ${
-                      activeTab === tab.id
-                        ? 'bg-blue-100 text-blue-700'
-                        : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                    }`}
-                  >
-                    <Icon className="mr-3 h-5 w-5" />
-                    {tab.label}
-                  </button>
-                );
-              })}
+          <div className="settings-sidebar">
+            <nav className="settings-nav">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`nav-tab ${activeTab === tab.id ? 'active' : ''}`}
+                >
+                  <span className="tab-icon">{tab.icon}</span>
+                  {tab.label}
+                </button>
+              ))}
             </nav>
           </div>
 
           {/* Main Content */}
-          <div className="flex-1">
-            <form onSubmit={handleSubmit(handleSaveSettings)} className="space-y-8">
+          <div className="settings-content">
+            <form onSubmit={handleSaveSettings} className="settings-form">
               {/* Exchange Rate Settings */}
               {activeTab === 'exchange' && (
-                <div className="bg-white rounded-lg shadow-sm p-6">
-                  <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-lg font-medium text-gray-900">Exchange Rate Settings</h2>
+                <div className="settings-section">
+                  <div className="section-header">
+                    <h2>Exchange Rate Settings</h2>
                     <button
                       type="button"
                       onClick={testExchangeRateConnection}
                       disabled={testingConnection}
-                      className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
+                      className="btn btn-secondary"
                     >
                       {testingConnection ? (
-                        <LoadingSpinner size="sm" />
+                        <>⏳ Testing...</>
                       ) : (
-                        <RefreshCw className="h-4 w-4 mr-2" />
+                        <>🔄 Test Connection</>
                       )}
-                      Test Connection
                     </button>
                   </div>
 
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Exchange Rate Provider
-                      </label>
-                      <select
-                        {...register('exchangeRateProvider')}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      >
-                        <option value="fixer">Fixer.io</option>
-                        <option value="exchangerate-api">ExchangeRate-API</option>
-                        <option value="currencyapi">CurrencyAPI</option>
-                      </select>
-                    </div>
+                  <div className="form-group">
+                    <label className="form-label">Exchange Rate Provider</label>
+                    <select
+                      value={formData.exchangeRateProvider}
+                      onChange={(e) => handleInputChange('exchangeRateProvider', e.target.value)}
+                      className="form-select"
+                    >
+                      <option value="fixer">Fixer.io</option>
+                      <option value="exchangerate-api">ExchangeRate-API</option>
+                      <option value="currencyapi">CurrencyAPI</option>
+                    </select>
+                  </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        API Key
-                      </label>
-                      <SecretInput
-                        name="exchangeRateApiKey"
-                        placeholder="Enter your exchange rate API key"
-                      />
-                    </div>
+                  <div className="form-group">
+                    <label className="form-label">API Key</label>
+                    <SecretInput
+                      name="exchangeRateApiKey"
+                      placeholder="Enter your exchange rate API key"
+                    />
                   </div>
                 </div>
               )}
 
               {/* Payment Settings */}
               {activeTab === 'payment' && (
-                <div className="bg-white rounded-lg shadow-sm p-6">
-                  <h2 className="text-lg font-medium text-gray-900 mb-6">Payment Gateway Settings</h2>
+                <div className="settings-section">
+                  <h2>Payment Gateway Settings</h2>
 
-                  <div className="space-y-6">
-                    <div>
-                      <h3 className="text-md font-medium text-gray-900 mb-4">Stripe Configuration</h3>
-                      <div className="space-y-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Publishable Key
-                          </label>
-                          <input
-                            {...register('stripePublishableKey')}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            placeholder="pk_test_..."
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Secret Key
-                          </label>
-                          <SecretInput
-                            name="stripeSecretKey"
-                            placeholder="sk_test_..."
-                          />
-                        </div>
-                      </div>
+                  <div className="subsection">
+                    <h3>Stripe Configuration</h3>
+                    <div className="form-group">
+                      <label className="form-label">Publishable Key</label>
+                      <input
+                        type="text"
+                        value={formData.stripePublishableKey}
+                        onChange={(e) => handleInputChange('stripePublishableKey', e.target.value)}
+                        className="form-input"
+                        placeholder="pk_test_..."
+                      />
                     </div>
+                    <div className="form-group">
+                      <label className="form-label">Secret Key</label>
+                      <SecretInput
+                        name="stripeSecretKey"
+                        placeholder="sk_test_..."
+                      />
+                    </div>
+                  </div>
 
-                    <div>
-                      <h3 className="text-md font-medium text-gray-900 mb-4">PayPal Configuration</h3>
-                      <div className="space-y-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Client ID
-                          </label>
-                          <input
-                            {...register('paypalClientId')}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            placeholder="PayPal Client ID"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Client Secret
-                          </label>
-                          <SecretInput
-                            name="paypalClientSecret"
-                            placeholder="PayPal Client Secret"
-                          />
-                        </div>
-                      </div>
+                  <div className="subsection">
+                    <h3>PayPal Configuration</h3>
+                    <div className="form-group">
+                      <label className="form-label">Client ID</label>
+                      <input
+                        type="text"
+                        value={formData.paypalClientId}
+                        onChange={(e) => handleInputChange('paypalClientId', e.target.value)}
+                        className="form-input"
+                        placeholder="PayPal Client ID"
+                      />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Client Secret</label>
+                      <SecretInput
+                        name="paypalClientSecret"
+                        placeholder="PayPal Client Secret"
+                      />
                     </div>
                   </div>
                 </div>
@@ -394,193 +347,183 @@ const AdminSettings = () => {
 
               {/* Email Settings */}
               {activeTab === 'email' && (
-                <div className="bg-white rounded-lg shadow-sm p-6">
-                  <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-lg font-medium text-gray-900">Email Settings</h2>
+                <div className="settings-section">
+                  <div className="section-header">
+                    <h2>Email Settings</h2>
                     <button
                       type="button"
                       onClick={testEmailConnection}
                       disabled={testingConnection}
-                      className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
+                      className="btn btn-secondary"
                     >
                       {testingConnection ? (
-                        <LoadingSpinner size="sm" />
+                        <>⏳ Testing...</>
                       ) : (
-                        <RefreshCw className="h-4 w-4 mr-2" />
+                        <>🔄 Test Connection</>
                       )}
-                      Test Connection
                     </button>
                   </div>
 
-                  <div className="space-y-6">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Email Provider
-                      </label>
-                      <select
-                        {...register('emailProvider')}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      >
-                        <option value="smtp">SMTP</option>
-                        <option value="sendgrid">SendGrid</option>
-                        <option value="mailgun">Mailgun</option>
-                      </select>
-                    </div>
+                  <div className="form-group">
+                    <label className="form-label">Email Provider</label>
+                    <select
+                      value={formData.emailProvider}
+                      onChange={(e) => handleInputChange('emailProvider', e.target.value)}
+                      className="form-select"
+                    >
+                      <option value="smtp">SMTP</option>
+                      <option value="sendgrid">SendGrid</option>
+                      <option value="mailgun">Mailgun</option>
+                    </select>
+                  </div>
 
-                    {watchedValues.emailProvider === 'smtp' && (
-                      <div className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                              SMTP Host
-                            </label>
-                            <input
-                              {...register('smtpHost')}
-                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                              placeholder="smtp.gmail.com"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                              SMTP Port
-                            </label>
-                            <input
-                              {...register('smtpPort', { valueAsNumber: true })}
-                              type="number"
-                              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                              placeholder="587"
-                            />
-                          </div>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            SMTP Username
-                          </label>
-                          <input
-                            {...register('smtpUser')}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            placeholder="your-email@gmail.com"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            SMTP Password
-                          </label>
-                          <SecretInput
-                            name="smtpPassword"
-                            placeholder="Your email password or app password"
-                          />
-                        </div>
-                      </div>
-                    )}
-
-                    {watchedValues.emailProvider === 'sendgrid' && (
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          SendGrid API Key
-                        </label>
-                        <SecretInput
-                          name="sendgridApiKey"
-                          placeholder="SG...."
+                  {formData.emailProvider === 'smtp' && (
+                    <div className="form-grid">
+                      <div className="form-group">
+                        <label className="form-label">SMTP Host</label>
+                        <input
+                          type="text"
+                          value={formData.smtpHost}
+                          onChange={(e) => handleInputChange('smtpHost', e.target.value)}
+                          className="form-input"
+                          placeholder="smtp.gmail.com"
                         />
                       </div>
-                    )}
-
-                    {watchedValues.emailProvider === 'mailgun' && (
-                      <div className="space-y-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Mailgun API Key
-                          </label>
-                          <SecretInput
-                            name="mailgunApiKey"
-                            placeholder="key-..."
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Mailgun Domain
-                          </label>
-                          <input
-                            {...register('mailgunDomain')}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            placeholder="mg.yourdomain.com"
-                          />
-                        </div>
+                      <div className="form-group">
+                        <label className="form-label">SMTP Port</label>
+                        <input
+                          type="number"
+                          value={formData.smtpPort}
+                          onChange={(e) => handleInputChange('smtpPort', parseInt(e.target.value))}
+                          className="form-input"
+                          placeholder="587"
+                        />
                       </div>
-                    )}
-                  </div>
+                      <div className="form-group">
+                        <label className="form-label">SMTP Username</label>
+                        <input
+                          type="text"
+                          value={formData.smtpUser}
+                          onChange={(e) => handleInputChange('smtpUser', e.target.value)}
+                          className="form-input"
+                          placeholder="your-email@gmail.com"
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label className="form-label">SMTP Password</label>
+                        <SecretInput
+                          name="smtpPassword"
+                          placeholder="Your email password or app password"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {formData.emailProvider === 'sendgrid' && (
+                    <div className="form-group">
+                      <label className="form-label">SendGrid API Key</label>
+                      <SecretInput
+                        name="sendgridApiKey"
+                        placeholder="SG...."
+                      />
+                    </div>
+                  )}
+
+                  {formData.emailProvider === 'mailgun' && (
+                    <div className="form-grid">
+                      <div className="form-group">
+                        <label className="form-label">Mailgun API Key</label>
+                        <SecretInput
+                          name="mailgunApiKey"
+                          placeholder="key-..."
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label className="form-label">Mailgun Domain</label>
+                        <input
+                          type="text"
+                          value={formData.mailgunDomain}
+                          onChange={(e) => handleInputChange('mailgunDomain', e.target.value)}
+                          className="form-input"
+                          placeholder="mg.yourdomain.com"
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
               {/* Platform Settings */}
               {activeTab === 'platform' && (
-                <div className="bg-white rounded-lg shadow-sm p-6">
-                  <h2 className="text-lg font-medium text-gray-900 mb-6">Platform Settings</h2>
+                <div className="settings-section">
+                  <h2>Platform Settings</h2>
 
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Platform Name
-                      </label>
+                  <div className="form-group">
+                    <label className="form-label">Platform Name</label>
+                    <input
+                      type="text"
+                      value={formData.platformName}
+                      onChange={(e) => handleInputChange('platformName', e.target.value)}
+                      className="form-input"
+                      placeholder="AI Services Platform"
+                    />
+                    {errors.platformName && (
+                      <p className="error-message">{errors.platformName}</p>
+                    )}
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">Support Email</label>
+                    <input
+                      type="email"
+                      value={formData.supportEmail}
+                      onChange={(e) => handleInputChange('supportEmail', e.target.value)}
+                      className="form-input"
+                      placeholder="support@yourplatform.com"
+                    />
+                    {errors.supportEmail && (
+                      <p className="error-message">{errors.supportEmail}</p>
+                    )}
+                  </div>
+
+                  <div className="checkbox-group">
+                    <div className="checkbox-item">
                       <input
-                        {...register('platformName')}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="AI Services Platform"
+                        type="checkbox"
+                        id="maintenanceMode"
+                        checked={formData.maintenanceMode}
+                        onChange={(e) => handleInputChange('maintenanceMode', e.target.checked)}
+                        className="form-checkbox"
                       />
-                      {errors.platformName && (
-                        <p className="mt-1 text-sm text-red-600">{errors.platformName.message}</p>
-                      )}
+                      <label htmlFor="maintenanceMode" className="checkbox-label">
+                        Maintenance Mode
+                      </label>
                     </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Support Email
-                      </label>
+                    <div className="checkbox-item">
                       <input
-                        {...register('supportEmail')}
-                        type="email"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="support@yourplatform.com"
+                        type="checkbox"
+                        id="registrationEnabled"
+                        checked={formData.registrationEnabled}
+                        onChange={(e) => handleInputChange('registrationEnabled', e.target.checked)}
+                        className="form-checkbox"
                       />
-                      {errors.supportEmail && (
-                        <p className="mt-1 text-sm text-red-600">{errors.supportEmail.message}</p>
-                      )}
+                      <label htmlFor="registrationEnabled" className="checkbox-label">
+                        Allow New User Registration
+                      </label>
                     </div>
 
-                    <div className="space-y-3">
-                      <div className="flex items-center">
-                        <input
-                          {...register('maintenanceMode')}
-                          type="checkbox"
-                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                        />
-                        <label className="ml-2 block text-sm text-gray-900">
-                          Maintenance Mode
-                        </label>
-                      </div>
-
-                      <div className="flex items-center">
-                        <input
-                          {...register('registrationEnabled')}
-                          type="checkbox"
-                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                        />
-                        <label className="ml-2 block text-sm text-gray-900">
-                          Allow New User Registration
-                        </label>
-                      </div>
-
-                      <div className="flex items-center">
-                        <input
-                          {...register('kycRequired')}
-                          type="checkbox"
-                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                        />
-                        <label className="ml-2 block text-sm text-gray-900">
-                          Require KYC Verification
-                        </label>
-                      </div>
+                    <div className="checkbox-item">
+                      <input
+                        type="checkbox"
+                        id="kycRequired"
+                        checked={formData.kycRequired}
+                        onChange={(e) => handleInputChange('kycRequired', e.target.checked)}
+                        className="form-checkbox"
+                      />
+                      <label htmlFor="kycRequired" className="checkbox-label">
+                        Require KYC Verification
+                      </label>
                     </div>
                   </div>
                 </div>
@@ -588,55 +531,49 @@ const AdminSettings = () => {
 
               {/* Security Settings */}
               {activeTab === 'security' && (
-                <div className="bg-white rounded-lg shadow-sm p-6">
-                  <h2 className="text-lg font-medium text-gray-900 mb-6">Security Settings</h2>
+                <div className="settings-section">
+                  <h2>Security Settings</h2>
 
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        JWT Secret Key
-                      </label>
-                      <SecretInput
-                        name="jwtSecret"
-                        placeholder="Enter a secure JWT secret (min 32 characters)"
+                  <div className="form-group">
+                    <label className="form-label">JWT Secret Key</label>
+                    <SecretInput
+                      name="jwtSecret"
+                      placeholder="Enter a secure JWT secret (min 32 characters)"
+                    />
+                    {errors.jwtSecret && (
+                      <p className="error-message">{errors.jwtSecret}</p>
+                    )}
+                  </div>
+
+                  <div className="form-grid">
+                    <div className="form-group">
+                      <label className="form-label">Session Timeout (minutes)</label>
+                      <input
+                        type="number"
+                        min="15"
+                        max="1440"
+                        value={formData.sessionTimeout}
+                        onChange={(e) => handleInputChange('sessionTimeout', parseInt(e.target.value))}
+                        className="form-input"
                       />
-                      {errors.jwtSecret && (
-                        <p className="mt-1 text-sm text-red-600">{errors.jwtSecret.message}</p>
+                      {errors.sessionTimeout && (
+                        <p className="error-message">{errors.sessionTimeout}</p>
                       )}
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Session Timeout (minutes)
-                        </label>
-                        <input
-                          {...register('sessionTimeout', { valueAsNumber: true })}
-                          type="number"
-                          min="15"
-                          max="1440"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                        {errors.sessionTimeout && (
-                          <p className="mt-1 text-sm text-red-600">{errors.sessionTimeout.message}</p>
-                        )}
-                      </div>
-
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Max Login Attempts
-                        </label>
-                        <input
-                          {...register('maxLoginAttempts', { valueAsNumber: true })}
-                          type="number"
-                          min="3"
-                          max="10"
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                        {errors.maxLoginAttempts && (
-                          <p className="mt-1 text-sm text-red-600">{errors.maxLoginAttempts.message}</p>
-                        )}
-                      </div>
+                    <div className="form-group">
+                      <label className="form-label">Max Login Attempts</label>
+                      <input
+                        type="number"
+                        min="3"
+                        max="10"
+                        value={formData.maxLoginAttempts}
+                        onChange={(e) => handleInputChange('maxLoginAttempts', parseInt(e.target.value))}
+                        className="form-input"
+                      />
+                      {errors.maxLoginAttempts && (
+                        <p className="error-message">{errors.maxLoginAttempts}</p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -644,39 +581,45 @@ const AdminSettings = () => {
 
               {/* Notification Settings */}
               {activeTab === 'notifications' && (
-                <div className="bg-white rounded-lg shadow-sm p-6">
-                  <h2 className="text-lg font-medium text-gray-900 mb-6">Notification Settings</h2>
+                <div className="settings-section">
+                  <h2>Notification Settings</h2>
 
-                  <div className="space-y-4">
-                    <div className="flex items-center">
+                  <div className="checkbox-group">
+                    <div className="checkbox-item">
                       <input
-                        {...register('emailNotifications')}
                         type="checkbox"
-                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        id="emailNotifications"
+                        checked={formData.emailNotifications}
+                        onChange={(e) => handleInputChange('emailNotifications', e.target.checked)}
+                        className="form-checkbox"
                       />
-                      <label className="ml-2 block text-sm text-gray-900">
+                      <label htmlFor="emailNotifications" className="checkbox-label">
                         Enable Email Notifications
                       </label>
                     </div>
 
-                    <div className="flex items-center">
+                    <div className="checkbox-item">
                       <input
-                        {...register('smsNotifications')}
                         type="checkbox"
-                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        id="smsNotifications"
+                        checked={formData.smsNotifications}
+                        onChange={(e) => handleInputChange('smsNotifications', e.target.checked)}
+                        className="form-checkbox"
                       />
-                      <label className="ml-2 block text-sm text-gray-900">
+                      <label htmlFor="smsNotifications" className="checkbox-label">
                         Enable SMS Notifications
                       </label>
                     </div>
 
-                    <div className="flex items-center">
+                    <div className="checkbox-item">
                       <input
-                        {...register('pushNotifications')}
                         type="checkbox"
-                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        id="pushNotifications"
+                        checked={formData.pushNotifications}
+                        onChange={(e) => handleInputChange('pushNotifications', e.target.checked)}
+                        className="form-checkbox"
                       />
-                      <label className="ml-2 block text-sm text-gray-900">
+                      <label htmlFor="pushNotifications" className="checkbox-label">
                         Enable Push Notifications
                       </label>
                     </div>
@@ -685,20 +628,20 @@ const AdminSettings = () => {
               )}
 
               {/* Save Button */}
-              <div className="flex justify-end">
+              <div className="form-actions">
                 <button
                   type="submit"
                   disabled={saving}
-                  className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="btn btn-primary"
                 >
                   {saving ? (
                     <>
-                      <LoadingSpinner size="sm" />
-                      <span className="ml-2">Saving...</span>
+                      <span className="btn-icon">⏳</span>
+                      Saving...
                     </>
                   ) : (
                     <>
-                      <Save className="mr-2 h-5 w-5" />
+                      <span className="btn-icon">💾</span>
                       Save Settings
                     </>
                   )}

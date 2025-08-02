@@ -5,7 +5,13 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js",
+    "start:supabase": "node simple-supabase-server.js",
+    "dev": "vite",
+    "dev:backend": "nodemon server.js",
+    "dev:supabase": "nodemon simple-supabase-server.js",
+    "build": "vite build",
+    "preview": "vite preview",
+    "setup:supabase": "node setup-supabase.js",
     "test": "jest",
     "test:watch": "jest --watch",
     "lint": "eslint .",
@@ -13,13 +19,21 @@
     "format": "prettier --write .",
     "seed": "node scripts/seed.js"
   },
-  "keywords": ["ai", "services", "platform", "api", "express", "mongodb"],
+  "keywords": [
+    "ai",
+    "services",
+    "platform",
+    "api",
+    "express",
+    "mongodb"
+  ],
   "author": "AI Services Platform Team",
   "license": "MIT",
   "engines": {
     "node": ">=16.0.0"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.53.0",
     "axios": "^1.11.0",
     "bcryptjs": "^3.0.2",
     "compression": "^1.8.1",
@@ -27,7 +41,7 @@
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^17.2.1",
-    "express": "^5.1.0",
+    "express": "^4.18.2",
     "express-rate-limit": "^8.0.1",
     "express-session": "^1.18.2",
     "express-validator": "^7.2.1",
@@ -42,14 +56,18 @@
     "passport-google-oauth20": "^2.0.0",
     "passport-jwt": "^4.0.1",
     "passport-local": "^1.0.0",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "react-router-dom": "^7.7.1",
     "stripe": "^18.3.0"
   },
   "devDependencies": {
+    "@vitejs/plugin-react": "^4.7.0",
     "eslint": "^9.32.0",
     "jest": "^30.0.5",
     "nodemon": "^3.1.10",
     "prettier": "^3.6.2",
-    "supertest": "^7.1.4"
+    "supertest": "^7.1.4",
+    "vite": "^7.0.6"
   }
 }
-

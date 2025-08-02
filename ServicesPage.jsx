@@ -1,37 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '../contexts/AuthContext';
-import { servicesAPI } from '../lib/api';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  Search,
-  Filter,
-  Star,
-  Clock,
-  DollarSign,
-  Zap,
-  Brain,
-  Image,
-  Code,
-  BarChart3,
-  MessageSquare,
-  Sparkles,
-  ArrowRight,
-  CheckCircle,
-  AlertCircle,
-} from 'lucide-react';
-import { toast } from 'sonner';
-import LoadingSpinner from '../components/LoadingSpinner';
+import { useAuth } from './AuthContext';
 
 function ServicesPage() {
   const { user } = useAuth();
@@ -44,12 +12,12 @@ function ServicesPage() {
   const [exchangeRate, setExchangeRate] = useState(null);
 
   const categories = [
-    { value: 'all', label: 'All Services', icon: Sparkles },
-    { value: 'language-models', label: 'Language Models', icon: MessageSquare },
-    { value: 'image-generation', label: 'Image Generation', icon: Image },
-    { value: 'code-execution', label: 'Code Execution', icon: Code },
-    { value: 'data-analysis', label: 'Data Analysis', icon: BarChart3 },
-    { value: 'ai-tools', label: 'AI Tools', icon: Brain },
+    { value: 'all', label: 'All Services', icon: '✨' },
+    { value: 'language-models', label: 'Language Models', icon: '💬' },
+    { value: 'image-generation', label: 'Image Generation', icon: '🖼️' },
+    { value: 'code-execution', label: 'Code Execution', icon: '💻' },
+    { value: 'data-analysis', label: 'Data Analysis', icon: '📊' },
+    { value: 'ai-tools', label: 'AI Tools', icon: '🧠' },
   ];
 
   const sortOptions = [
@@ -74,6 +42,7 @@ function ServicesPage() {
       features: ['Text Generation', 'Code Assistance', 'Analysis', 'Conversation'],
       provider: 'OpenAI',
       responseTime: '< 2s',
+      image: '🤖'
     },
     {
       _id: '2',
@@ -88,6 +57,7 @@ function ServicesPage() {
       features: ['Code Generation', 'Debugging', 'Refactoring', 'Documentation'],
       provider: 'DeepSeek',
       responseTime: '< 3s',
+      image: '👨‍💻'
     },
     {
       _id: '3',
@@ -102,6 +72,7 @@ function ServicesPage() {
       features: ['High Resolution', 'Style Control', 'Text Integration', 'Commercial Use'],
       provider: 'OpenAI',
       responseTime: '< 10s',
+      image: '🎨'
     },
     {
       _id: '4',
@@ -116,6 +87,7 @@ function ServicesPage() {
       features: ['Long Context', 'Analysis', 'Writing', 'Safety'],
       provider: 'Anthropic',
       responseTime: '< 2s',
+      image: '🧠'
     },
     {
       _id: '5',
@@ -130,6 +102,7 @@ function ServicesPage() {
       features: ['Open Source', 'Customizable', 'Fast Generation', 'Multiple Styles'],
       provider: 'Stability AI',
       responseTime: '< 5s',
+      image: '🖼️'
     },
     {
       _id: '6',
@@ -144,6 +117,7 @@ function ServicesPage() {
       features: ['Multi-Language', 'Secure Sandbox', 'File Support', 'Visualization'],
       provider: 'Platform',
       responseTime: '< 5s',
+      image: '⚡'
     },
   ];
 
@@ -206,258 +180,234 @@ function ServicesPage() {
 
   const formatPrice = (priceUSD, unit) => {
     if (!exchangeRate) return `$${priceUSD} ${unit}`;
-    const priceToman = Math.round(priceUSD * exchangeRate);
-    return `${priceToman.toLocaleString()} ﷼ ${unit}`;
+    const priceIRR = Math.round(priceUSD * exchangeRate);
+    return `${priceIRR.toLocaleString()} ﷼ ${unit}`;
   };
 
   const getCategoryIcon = (category) => {
     const categoryData = categories.find(cat => cat.value === category);
-    return categoryData ? categoryData.icon : Sparkles;
+    return categoryData ? categoryData.icon : '🔧';
   };
 
   const handleOrderService = (service) => {
     if (!user) {
-      toast.error('Please sign in to order services');
+      alert('Please log in to order services');
       return;
     }
-    
-    // Navigate to order page (would be implemented in Phase 6)
-    toast.info(`Ordering ${service.name} - Feature coming soon!`);
+    alert(`Ordering ${service.name}. This feature will be implemented with payment integration.`);
   };
 
   if (isLoading) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="flex items-center justify-center min-h-[400px]">
-          <LoadingSpinner size="lg" />
+      <div className="services-page">
+        <div className="loading-container">
+          <div className="loading-spinner">⏳</div>
+          <p>Loading services...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-7xl">
-      <div className="space-y-8">
+    <div className="services-page">
+      <div className="services-container">
         {/* Header */}
-        <div className="text-center space-y-4">
-          <h1 className="text-4xl font-bold">AI Services Catalog</h1>
-          <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
+        <div className="services-header">
+          <h1>AI Services Catalog</h1>
+          <p>
             Discover and access premium AI services from leading providers. 
             All prices shown in Iranian Toman with real-time conversion.
           </p>
           {exchangeRate && (
-            <div className="inline-flex items-center space-x-2 bg-muted px-3 py-1 rounded-full text-sm">
-              <DollarSign className="h-4 w-4" />
+            <div className="exchange-rate">
+              <span>💱</span>
               <span>1 USD = {exchangeRate.toLocaleString()} ﷼</span>
             </div>
           )}
         </div>
 
         {/* Filters and Search */}
-        <div className="space-y-4">
-          <div className="flex flex-col lg:flex-row gap-4">
+        <div className="services-filters">
+          <div className="filters-row">
             {/* Search */}
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
+            <div className="search-container">
+              <span className="search-icon">🔍</span>
+              <input
+                type="text"
                 placeholder="Search services..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
+                className="search-input"
               />
             </div>
 
             {/* Category Filter */}
-            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-              <SelectTrigger className="w-full lg:w-[200px]">
-                <SelectValue placeholder="Category" />
-              </SelectTrigger>
-              <SelectContent>
-                {categories.map((category) => (
-                  <SelectItem key={category.value} value={category.value}>
-                    <div className="flex items-center space-x-2">
-                      <category.icon className="h-4 w-4" />
-                      <span>{category.label}</span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <select 
+              value={selectedCategory} 
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="filter-select"
+            >
+              {categories.map((category) => (
+                <option key={category.value} value={category.value}>
+                  {category.icon} {category.label}
+                </option>
+              ))}
+            </select>
 
             {/* Sort */}
-            <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger className="w-full lg:w-[200px]">
-                <SelectValue placeholder="Sort by" />
-              </SelectTrigger>
-              <SelectContent>
-                {sortOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <select 
+              value={sortBy} 
+              onChange={(e) => setSortBy(e.target.value)}
+              className="filter-select"
+            >
+              {sortOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* Results count */}
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-muted-foreground">
-              Showing {filteredServices.length} of {services.length} services
-            </p>
+          <div className="results-count">
+            <p>Showing {filteredServices.length} of {services.length} services</p>
           </div>
         </div>
 
         {/* Services Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredServices.map((service) => {
-            const CategoryIcon = getCategoryIcon(service.category);
-            
-            return (
-              <Card key={service._id} className="group hover:shadow-lg transition-shadow duration-200">
-                <CardHeader className="space-y-4">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center space-x-2">
-                      <div className="p-2 bg-primary/10 rounded-lg">
-                        <CategoryIcon className="h-5 w-5 text-primary" />
-                      </div>
-                      <div>
-                        <CardTitle className="text-lg">{service.name}</CardTitle>
-                        <p className="text-sm text-muted-foreground">{service.provider}</p>
-                      </div>
+        <div className="services-grid">
+          {filteredServices.map((service) => (
+            <div key={service._id} className="service-card">
+              <div className="service-header">
+                <div className="service-info">
+                  <div className="service-icon">
+                    <span className="category-icon">{getCategoryIcon(service.category)}</span>
+                  </div>
+                  <div className="service-details">
+                    <h3 className="service-name">{service.name}</h3>
+                    <p className="service-provider">{service.provider}</p>
+                  </div>
+                </div>
+                <div className="service-category">
+                  {categories.find(cat => cat.value === service.category)?.label}
+                </div>
+              </div>
+
+              <div className="service-description">
+                {service.description}
+              </div>
+
+              <div className="service-content">
+                {/* Features */}
+                <div className="service-features">
+                  <h4>Key Features</h4>
+                  <div className="features-list">
+                    {service.features.slice(0, 3).map((feature, index) => (
+                      <span key={index} className="feature-tag">
+                        {feature}
+                      </span>
+                    ))}
+                    {service.features.length > 3 && (
+                      <span className="feature-tag more">
+                        +{service.features.length - 3} more
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Stats */}
+                <div className="service-stats">
+                  <div className="stat">
+                    <div className="stat-value">
+                      <span>⭐</span>
+                      <span>{service.rating}</span>
                     </div>
-                    <Badge variant="outline" className="text-xs">
-                      {categories.find(cat => cat.value === service.category)?.label}
-                    </Badge>
+                    <p className="stat-label">Rating</p>
+                  </div>
+                  <div className="stat">
+                    <div className="stat-value">
+                      <span>⏱️</span>
+                      <span>{service.responseTime}</span>
+                    </div>
+                    <p className="stat-label">Response</p>
+                  </div>
+                  <div className="stat">
+                    <div className="stat-value">
+                      <span>🔥</span>
+                      <span>{service.popularity}%</span>
+                    </div>
+                    <p className="stat-label">Popular</p>
+                  </div>
+                </div>
+
+                {/* Pricing and Action */}
+                <div className="service-pricing">
+                  <div className="price-display">
+                    <div className="price-main">
+                      {formatPrice(service.priceUSD, service.unit)}
+                    </div>
+                    {exchangeRate && (
+                      <div className="price-usd">
+                        ${service.priceUSD} {service.unit}
+                      </div>
+                    )}
                   </div>
 
-                  <CardDescription className="text-sm leading-relaxed">
-                    {service.description}
-                  </CardDescription>
-                </CardHeader>
-
-                <CardContent className="space-y-4">
-                  {/* Features */}
-                  <div className="space-y-2">
-                    <h4 className="text-sm font-medium">Key Features</h4>
-                    <div className="flex flex-wrap gap-1">
-                      {service.features.slice(0, 3).map((feature, index) => (
-                        <Badge key={index} variant="secondary" className="text-xs">
-                          {feature}
-                        </Badge>
-                      ))}
-                      {service.features.length > 3 && (
-                        <Badge variant="secondary" className="text-xs">
-                          +{service.features.length - 3} more
-                        </Badge>
-                      )}
-                    </div>
-                  </div>
-
-                  <Separator />
-
-                  {/* Stats */}
-                  <div className="grid grid-cols-3 gap-4 text-center">
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-center space-x-1">
-                        <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                        <span className="text-sm font-medium">{service.rating}</span>
-                      </div>
-                      <p className="text-xs text-muted-foreground">Rating</p>
-                    </div>
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-center space-x-1">
-                        <Clock className="h-3 w-3 text-muted-foreground" />
-                        <span className="text-sm font-medium">{service.responseTime}</span>
-                      </div>
-                      <p className="text-xs text-muted-foreground">Response</p>
-                    </div>
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-center space-x-1">
-                        <Zap className="h-3 w-3 text-muted-foreground" />
-                        <span className="text-sm font-medium">{service.popularity}%</span>
-                      </div>
-                      <p className="text-xs text-muted-foreground">Popular</p>
-                    </div>
-                  </div>
-
-                  <Separator />
-
-                  {/* Pricing and Action */}
-                  <div className="space-y-3">
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-primary">
-                        {formatPrice(service.priceUSD, service.unit)}
-                      </div>
-                      {exchangeRate && (
-                        <div className="text-sm text-muted-foreground">
-                          ${service.priceUSD} {service.unit}
-                        </div>
-                      )}
-                    </div>
-
-                    <Button 
-                      onClick={() => handleOrderService(service)}
-                      className="w-full group-hover:bg-primary/90 transition-colors"
-                    >
-                      Order Now
-                      <ArrowRight className="ml-2 h-4 w-4" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
+                  <button 
+                    onClick={() => handleOrderService(service)}
+                    className="order-button"
+                  >
+                    Order Now
+                    <span>→</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
 
         {/* Empty State */}
         {filteredServices.length === 0 && (
-          <div className="text-center py-12">
-            <div className="mx-auto w-16 h-16 bg-muted rounded-full flex items-center justify-center mb-4">
-              <Search className="h-8 w-8 text-muted-foreground" />
-            </div>
-            <h3 className="text-lg font-medium mb-2">No services found</h3>
-            <p className="text-muted-foreground mb-4">
+          <div className="empty-state">
+            <div className="empty-icon">🔍</div>
+            <h3>No services found</h3>
+            <p>
               Try adjusting your search criteria or browse all categories.
             </p>
-            <Button 
-              variant="outline" 
+            <button 
+              className="clear-filters-button"
               onClick={() => {
                 setSearchQuery('');
                 setSelectedCategory('all');
               }}
             >
               Clear Filters
-            </Button>
+            </button>
           </div>
         )}
 
-        {/* Info Section */}
-        <div className="bg-muted/50 rounded-lg p-6 space-y-4">
-          <h3 className="text-lg font-medium flex items-center space-x-2">
-            <CheckCircle className="h-5 w-5 text-green-600" />
-            <span>Why Choose Our Platform?</span>
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-            <div className="flex items-start space-x-2">
-              <CheckCircle className="h-4 w-4 text-green-600 mt-0.5" />
-              <div>
-                <p className="font-medium">Secure Payments</p>
-                <p className="text-muted-foreground">KYC verified transactions with multiple payment options</p>
-              </div>
+        {/* Information Section */}
+        <div className="services-info">
+          <div className="info-grid">
+            <div className="info-card">
+              <div className="info-icon">🔒</div>
+              <h3>Secure & Reliable</h3>
+              <p>All services are hosted on secure infrastructure with 99.9% uptime guarantee.</p>
             </div>
-            <div className="flex items-start space-x-2">
-              <CheckCircle className="h-4 w-4 text-green-600 mt-0.5" />
-              <div>
-                <p className="font-medium">Real-time Pricing</p>
-                <p className="text-muted-foreground">Live USD to Toman conversion with transparent fees</p>
-              </div>
+            <div className="info-card">
+              <div className="info-icon">💰</div>
+              <h3>Transparent Pricing</h3>
+              <p>No hidden fees. Pay only for what you use with real-time currency conversion.</p>
             </div>
-            <div className="flex items-start space-x-2">
-              <CheckCircle className="h-4 w-4 text-green-600 mt-0.5" />
-              <div>
-                <p className="font-medium">24/7 Support</p>
-                <p className="text-muted-foreground">Dedicated customer support for all your needs</p>
-              </div>
+            <div className="info-card">
+              <div className="info-icon">⚡</div>
+              <h3>Fast Performance</h3>
+              <p>Optimized APIs with low latency and high throughput for the best user experience.</p>
+            </div>
+            <div className="info-card">
+              <div className="info-icon">🎯</div>
+              <h3>Quality Assured</h3>
+              <p>All services are tested and verified to meet the highest quality standards.</p>
             </div>
           </div>
         </div>

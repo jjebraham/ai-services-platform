@@ -1,66 +1,29 @@
 import React, { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { 
-  Activity, 
-  Plus, 
-  Search, 
-  Edit,
-  Trash2,
-  Eye,
-  EyeOff,
-  DollarSign,
-  Star,
-  Clock,
-  Users,
-  BarChart3,
-  Settings,
-  Save,
-  X
-} from 'lucide-react';
-import { api } from '../../lib/api';
-import LoadingSpinner from '../../components/LoadingSpinner';
-
-const serviceSchema = z.object({
-  name: z.string().min(2, 'Name must be at least 2 characters').max(100, 'Name must be less than 100 characters'),
-  description: z.string().min(10, 'Description must be at least 10 characters').max(500, 'Description must be less than 500 characters'),
-  provider: z.string().min(2, 'Provider must be at least 2 characters'),
-  category: z.enum(['language_models', 'image_generation', 'code_execution', 'data_analysis', 'ai_tools'], {
-    required_error: 'Please select a category',
-  }),
-  price: z.number().min(0.001, 'Price must be greater than 0').max(1000, 'Price must be less than $1000'),
-  unit: z.string().min(1, 'Unit is required'),
-  responseTime: z.string().optional(),
-  features: z.string().optional(),
-  apiEndpoint: z.string().url('Must be a valid URL').optional().or(z.literal('')),
-  isActive: z.boolean().default(true),
-});
 
 const AdminServices = () => {
   const [services, setServices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [editingService, setEditingService] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [showCreateForm, setShowCreateForm] = useState(false);
-  const [editingService, setEditingService] = useState(null);
-
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-    reset,
-    setValue
-  } = useForm({
-    resolver: zodResolver(serviceSchema),
-    defaultValues: {
-      isActive: true,
-      responseTime: '< 2s',
-      unit: '1K tokens'
-    }
+  
+  // Form state
+  const [formData, setFormData] = useState({
+    name: '',
+    provider: '',
+    category: '',
+    price: '',
+    unit: '',
+    responseTime: '',
+    description: '',
+    features: '',
+    apiEndpoint: '',
+    isActive: true
   });
+  const [formErrors, setFormErrors] = useState({});
 
   useEffect(() => {
     fetchServices();
@@ -68,8 +31,54 @@ const AdminServices = () => {
 
   const fetchServices = async () => {
     try {
-      const response = await api.get('/admin/services');
-      setServices(response.data);
+      // Mock data for demonstration
+      setServices([
+        {
+          _id: '1',
+          name: 'OpenAI GPT-4',
+          provider: 'OpenAI',
+          category: 'language_models',
+          price: 0.03,
+          unit: '1K tokens',
+          responseTime: '< 2s',
+          description: 'Most capable GPT model for complex tasks requiring deep understanding',
+          features: ['Text Generation', 'Code Assistance', 'Analysis'],
+          apiEndpoint: 'https://api.openai.com/v1/chat/completions',
+          isActive: true,
+          orderCount: 1250,
+          revenue: 37500
+        },
+        {
+          _id: '2',
+          name: 'DALL-E 3',
+          provider: 'OpenAI',
+          category: 'image_generation',
+          price: 0.04,
+          unit: 'image',
+          responseTime: '< 10s',
+          description: 'Advanced AI image generation with improved quality and prompt adherence',
+          features: ['High Quality Images', 'Prompt Adherence', 'Style Control'],
+          apiEndpoint: 'https://api.openai.com/v1/images/generations',
+          isActive: true,
+          orderCount: 850,
+          revenue: 34000
+        },
+        {
+          _id: '3',
+          name: 'Claude 3 Sonnet',
+          provider: 'Anthropic',
+          category: 'language_models',
+          price: 0.015,
+          unit: '1K tokens',
+          responseTime: '< 3s',
+          description: 'Balanced AI assistant for a wide range of tasks',
+          features: ['Reasoning', 'Analysis', 'Creative Writing'],
+          apiEndpoint: 'https://api.anthropic.com/v1/messages',
+          isActive: false,
+          orderCount: 420,
+          revenue: 6300
+        }
+      ]);
     } catch (error) {
       console.error('Error fetching services:', error);
     } finally {
@@ -77,91 +86,159 @@ const AdminServices = () => {
     }
   };
 
-  const handleCreateService = async (data) => {
+  const validateForm = () => {
+    const errors = {};
+    
+    if (!formData.name.trim()) errors.name = 'Service name is required';
+    if (!formData.provider.trim()) errors.provider = 'Provider is required';
+    if (!formData.category) errors.category = 'Category is required';
+    if (!formData.price || formData.price <= 0) errors.price = 'Valid price is required';
+    if (!formData.unit.trim()) errors.unit = 'Unit is required';
+    if (!formData.description.trim()) errors.description = 'Description is required';
+    
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
+    }));
+    
+    // Clear error when user starts typing
+    if (formErrors[name]) {
+      setFormErrors(prev => ({
+        ...prev,
+        [name]: ''
+      }));
+    }
+  };
+
+  const handleCreateService = async (e) => {
+    e.preventDefault();
+    
+    if (!validateForm()) return;
+    
     setSubmitting(true);
     try {
-      const response = await api.post('/admin/services', data);
-      setServices([response.data, ...services]);
+      // Mock API call
+      const newService = {
+        _id: Date.now().toString(),
+        ...formData,
+        price: parseFloat(formData.price),
+        features: formData.features.split(',').map(f => f.trim()).filter(f => f),
+        orderCount: 0,
+        revenue: 0
+      };
+      
+      setServices(prev => [...prev, newService]);
+      resetForm();
       setShowCreateForm(false);
-      reset();
     } catch (error) {
       console.error('Error creating service:', error);
-      alert('Error creating service. Please try again.');
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleUpdateService = async (data) => {
+  const handleUpdateService = async (e) => {
+    e.preventDefault();
+    
+    if (!validateForm()) return;
+    
     setSubmitting(true);
     try {
-      const response = await api.put(`/admin/services/${editingService._id}`, data);
-      setServices(services.map(service => 
-        service._id === editingService._id ? response.data : service
-      ));
+      // Mock API call
+      const updatedService = {
+        ...editingService,
+        ...formData,
+        price: parseFloat(formData.price),
+        features: formData.features.split(',').map(f => f.trim()).filter(f => f)
+      };
+      
+      setServices(prev => prev.map(s => s._id === editingService._id ? updatedService : s));
+      resetForm();
+      setShowCreateForm(false);
       setEditingService(null);
-      reset();
     } catch (error) {
       console.error('Error updating service:', error);
-      alert('Error updating service. Please try again.');
     } finally {
       setSubmitting(false);
     }
   };
 
   const handleDeleteService = async (serviceId) => {
-    if (!confirm('Are you sure you want to delete this service?')) return;
-
+    if (!window.confirm('Are you sure you want to delete this service?')) return;
+    
     try {
-      await api.delete(`/admin/services/${serviceId}`);
-      setServices(services.filter(service => service._id !== serviceId));
+      // Mock API call
+      setServices(prev => prev.filter(s => s._id !== serviceId));
     } catch (error) {
       console.error('Error deleting service:', error);
-      alert('Error deleting service. Please try again.');
     }
   };
 
   const handleToggleStatus = async (serviceId, currentStatus) => {
     try {
-      const response = await api.patch(`/admin/services/${serviceId}`, {
-        isActive: !currentStatus
-      });
-      setServices(services.map(service => 
-        service._id === serviceId ? response.data : service
+      // Mock API call
+      setServices(prev => prev.map(s => 
+        s._id === serviceId ? { ...s, isActive: !currentStatus } : s
       ));
     } catch (error) {
       console.error('Error toggling service status:', error);
-      alert('Error updating service status. Please try again.');
     }
   };
 
   const startEdit = (service) => {
     setEditingService(service);
-    setShowCreateForm(true);
-    
-    // Populate form with service data
-    Object.keys(service).forEach(key => {
-      if (key !== '_id' && key !== 'createdAt' && key !== 'updatedAt') {
-        setValue(key, service[key]);
-      }
+    setFormData({
+      name: service.name,
+      provider: service.provider,
+      category: service.category,
+      price: service.price.toString(),
+      unit: service.unit,
+      responseTime: service.responseTime || '',
+      description: service.description,
+      features: service.features.join(', '),
+      apiEndpoint: service.apiEndpoint || '',
+      isActive: service.isActive
     });
+    setShowCreateForm(true);
+  };
+
+  const resetForm = () => {
+    setFormData({
+      name: '',
+      provider: '',
+      category: '',
+      price: '',
+      unit: '',
+      responseTime: '',
+      description: '',
+      features: '',
+      apiEndpoint: '',
+      isActive: true
+    });
+    setFormErrors({});
   };
 
   const cancelEdit = () => {
-    setEditingService(null);
     setShowCreateForm(false);
-    reset();
+    setEditingService(null);
+    resetForm();
   };
 
   const getCategoryIcon = (category) => {
     const icons = {
-      language_models: Activity,
-      image_generation: Eye,
-      code_execution: Settings,
-      data_analysis: BarChart3,
-      ai_tools: Star
+      language_models: '🤖',
+      image_generation: '🎨',
+      code_execution: '💻',
+      data_analysis: '📊',
+      ai_tools: '⚡'
     };
-    return icons[category] || Activity;
+    return icons[category] || '🔧';
   };
 
   const getCategoryLabel = (category) => {
@@ -179,13 +256,17 @@ const AdminServices = () => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
       currency: 'USD',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 4,
     }).format(amount);
   };
 
+  // Filter services
   const filteredServices = services.filter(service => {
     const matchesSearch = service.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          service.provider.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          service.description.toLowerCase().includes(searchTerm.toLowerCase());
+    
     const matchesCategory = categoryFilter === 'all' || service.category === categoryFilter;
     const matchesStatus = statusFilter === 'all' || 
                          (statusFilter === 'active' && service.isActive) ||
@@ -196,29 +277,30 @@ const AdminServices = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <LoadingSpinner />
+      <div className="admin-services">
+        <div className="loading-container">
+          <div className="loading-spinner">⏳</div>
+          <p>Loading services...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="admin-services">
+      <div className="admin-container">
         {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Service Management</h1>
-              <p className="text-gray-600 mt-2">
-                Manage AI services, pricing, and availability
-              </p>
+        <div className="admin-header">
+          <div className="header-content">
+            <div className="header-text">
+              <h1>Service Management</h1>
+              <p>Manage AI services, pricing, and availability</p>
             </div>
             <button
               onClick={() => setShowCreateForm(true)}
-              className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              className="btn btn-primary"
             >
-              <Plus className="mr-2 h-4 w-4" />
+              <span className="btn-icon">➕</span>
               Add Service
             </button>
           </div>
@@ -226,56 +308,53 @@ const AdminServices = () => {
 
         {/* Create/Edit Form */}
         {showCreateForm && (
-          <div className="mb-8 bg-white rounded-lg shadow-sm p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-semibold text-gray-900">
-                {editingService ? 'Edit Service' : 'Create New Service'}
-              </h2>
-              <button
-                onClick={cancelEdit}
-                className="text-gray-400 hover:text-gray-500"
-              >
-                <X className="h-6 w-6" />
+          <div className="form-section">
+            <div className="form-header">
+              <h2>{editingService ? 'Edit Service' : 'Create New Service'}</h2>
+              <button onClick={cancelEdit} className="btn-close">
+                ✕
               </button>
             </div>
 
-            <form onSubmit={handleSubmit(editingService ? handleUpdateService : handleCreateService)} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Service Name *
-                  </label>
+            <form onSubmit={editingService ? handleUpdateService : handleCreateService} className="service-form">
+              <div className="form-grid">
+                <div className="form-group">
+                  <label className="form-label">Service Name *</label>
                   <input
-                    {...register('name')}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    type="text"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleInputChange}
+                    className="form-input"
                     placeholder="e.g., OpenAI GPT-4"
                   />
-                  {errors.name && (
-                    <p className="mt-1 text-sm text-red-600">{errors.name.message}</p>
+                  {formErrors.name && (
+                    <p className="form-error">{formErrors.name}</p>
                   )}
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Provider *
-                  </label>
+                <div className="form-group">
+                  <label className="form-label">Provider *</label>
                   <input
-                    {...register('provider')}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    type="text"
+                    name="provider"
+                    value={formData.provider}
+                    onChange={handleInputChange}
+                    className="form-input"
                     placeholder="e.g., OpenAI"
                   />
-                  {errors.provider && (
-                    <p className="mt-1 text-sm text-red-600">{errors.provider.message}</p>
+                  {formErrors.provider && (
+                    <p className="form-error">{formErrors.provider}</p>
                   )}
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Category *
-                  </label>
+                <div className="form-group">
+                  <label className="form-label">Category *</label>
                   <select
-                    {...register('category')}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    name="category"
+                    value={formData.category}
+                    onChange={handleInputChange}
+                    className="form-select"
                   >
                     <option value="">Select a category</option>
                     <option value="language_models">Language Models</option>
@@ -284,127 +363,122 @@ const AdminServices = () => {
                     <option value="data_analysis">Data Analysis</option>
                     <option value="ai_tools">AI Tools</option>
                   </select>
-                  {errors.category && (
-                    <p className="mt-1 text-sm text-red-600">{errors.category.message}</p>
+                  {formErrors.category && (
+                    <p className="form-error">{formErrors.category}</p>
                   )}
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Price (USD) *
-                  </label>
+                <div className="form-group">
+                  <label className="form-label">Price (USD) *</label>
                   <input
-                    {...register('price', { valueAsNumber: true })}
                     type="number"
+                    name="price"
+                    value={formData.price}
+                    onChange={handleInputChange}
                     step="0.001"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="form-input"
                     placeholder="0.03"
                   />
-                  {errors.price && (
-                    <p className="mt-1 text-sm text-red-600">{errors.price.message}</p>
+                  {formErrors.price && (
+                    <p className="form-error">{formErrors.price}</p>
                   )}
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Unit *
-                  </label>
+                <div className="form-group">
+                  <label className="form-label">Unit *</label>
                   <input
-                    {...register('unit')}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    type="text"
+                    name="unit"
+                    value={formData.unit}
+                    onChange={handleInputChange}
+                    className="form-input"
                     placeholder="e.g., 1K tokens, image, execution"
                   />
-                  {errors.unit && (
-                    <p className="mt-1 text-sm text-red-600">{errors.unit.message}</p>
+                  {formErrors.unit && (
+                    <p className="form-error">{formErrors.unit}</p>
                   )}
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Response Time
-                  </label>
+                <div className="form-group">
+                  <label className="form-label">Response Time</label>
                   <input
-                    {...register('responseTime')}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    type="text"
+                    name="responseTime"
+                    value={formData.responseTime}
+                    onChange={handleInputChange}
+                    className="form-input"
                     placeholder="e.g., < 2s, < 10s"
                   />
                 </div>
 
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Description *
-                  </label>
+                <div className="form-group form-group-full">
+                  <label className="form-label">Description *</label>
                   <textarea
-                    {...register('description')}
+                    name="description"
+                    value={formData.description}
+                    onChange={handleInputChange}
                     rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    className="form-textarea"
                     placeholder="Describe the service and its capabilities..."
                   />
-                  {errors.description && (
-                    <p className="mt-1 text-sm text-red-600">{errors.description.message}</p>
+                  {formErrors.description && (
+                    <p className="form-error">{formErrors.description}</p>
                   )}
                 </div>
 
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Features (comma-separated)
-                  </label>
+                <div className="form-group form-group-full">
+                  <label className="form-label">Features (comma-separated)</label>
                   <input
-                    {...register('features')}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    type="text"
+                    name="features"
+                    value={formData.features}
+                    onChange={handleInputChange}
+                    className="form-input"
                     placeholder="e.g., Text Generation, Code Assistance, Analysis"
                   />
                 </div>
 
-                <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    API Endpoint
-                  </label>
+                <div className="form-group form-group-full">
+                  <label className="form-label">API Endpoint</label>
                   <input
-                    {...register('apiEndpoint')}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    type="url"
+                    name="apiEndpoint"
+                    value={formData.apiEndpoint}
+                    onChange={handleInputChange}
+                    className="form-input"
                     placeholder="https://api.example.com/v1/service"
                   />
-                  {errors.apiEndpoint && (
-                    <p className="mt-1 text-sm text-red-600">{errors.apiEndpoint.message}</p>
-                  )}
                 </div>
 
-                <div className="md:col-span-2">
-                  <div className="flex items-center">
+                <div className="form-group form-group-full">
+                  <div className="checkbox-group">
                     <input
-                      {...register('isActive')}
                       type="checkbox"
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      name="isActive"
+                      checked={formData.isActive}
+                      onChange={handleInputChange}
+                      className="form-checkbox"
                     />
-                    <label className="ml-2 block text-sm text-gray-900">
+                    <label className="checkbox-label">
                       Service is active and available to users
                     </label>
                   </div>
                 </div>
               </div>
 
-              <div className="flex justify-end space-x-3">
-                <button
-                  type="button"
-                  onClick={cancelEdit}
-                  className="px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                >
+              <div className="form-actions">
+                <button type="button" onClick={cancelEdit} className="btn btn-secondary">
                   Cancel
                 </button>
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
+                <button type="submit" disabled={submitting} className="btn btn-primary">
                   {submitting ? (
                     <>
-                      <LoadingSpinner size="sm" />
-                      <span className="ml-2">{editingService ? 'Updating...' : 'Creating...'}</span>
+                      <span className="btn-icon">⏳</span>
+                      {editingService ? 'Updating...' : 'Creating...'}
                     </>
                   ) : (
                     <>
-                      <Save className="mr-2 h-4 w-4" />
+                      <span className="btn-icon">💾</span>
                       {editingService ? 'Update Service' : 'Create Service'}
                     </>
                   )}
@@ -415,26 +489,26 @@ const AdminServices = () => {
         )}
 
         {/* Filters */}
-        <div className="mb-6 bg-white rounded-lg shadow-sm p-4">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
-            <div className="flex-1 max-w-lg">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+        <div className="filters-section">
+          <div className="filters-content">
+            <div className="search-group">
+              <div className="search-input-wrapper">
+                <span className="search-icon">🔍</span>
                 <input
                   type="text"
                   placeholder="Search services..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="search-input"
                 />
               </div>
             </div>
             
-            <div className="flex space-x-4">
+            <div className="filter-group">
               <select
                 value={categoryFilter}
                 onChange={(e) => setCategoryFilter(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="filter-select"
               >
                 <option value="all">All Categories</option>
                 <option value="language_models">Language Models</option>
@@ -447,7 +521,7 @@ const AdminServices = () => {
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="filter-select"
               >
                 <option value="all">All Status</option>
                 <option value="active">Active</option>
@@ -458,110 +532,102 @@ const AdminServices = () => {
         </div>
 
         {/* Services Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredServices.map((service) => {
-            const CategoryIcon = getCategoryIcon(service.category);
-            
-            return (
-              <div key={service._id} className="bg-white rounded-lg shadow-sm p-6">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center space-x-3">
-                    <div className={`p-2 rounded-lg ${service.isActive ? 'bg-blue-100' : 'bg-gray-100'}`}>
-                      <CategoryIcon className={`h-6 w-6 ${service.isActive ? 'text-blue-600' : 'text-gray-400'}`} />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-medium text-gray-900">{service.name}</h3>
-                      <p className="text-sm text-gray-500">{service.provider}</p>
-                    </div>
+        <div className="services-grid">
+          {filteredServices.map((service) => (
+            <div key={service._id} className="service-card">
+              <div className="service-header">
+                <div className="service-info">
+                  <div className={`service-icon ${service.isActive ? 'active' : 'inactive'}`}>
+                    <span>{getCategoryIcon(service.category)}</span>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <button
-                      onClick={() => handleToggleStatus(service._id, service.isActive)}
-                      className={`p-1 rounded ${service.isActive ? 'text-green-600 hover:text-green-700' : 'text-gray-400 hover:text-gray-500'}`}
-                      title={service.isActive ? 'Deactivate' : 'Activate'}
-                    >
-                      {service.isActive ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
-                    </button>
-                    <button
-                      onClick={() => startEdit(service)}
-                      className="p-1 text-blue-600 hover:text-blue-700"
-                      title="Edit"
-                    >
-                      <Edit className="h-4 w-4" />
-                    </button>
-                    <button
-                      onClick={() => handleDeleteService(service._id)}
-                      className="p-1 text-red-600 hover:text-red-700"
-                      title="Delete"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                  <div className="service-details">
+                    <h3 className="service-name">{service.name}</h3>
+                    <p className="service-provider">{service.provider}</p>
                   </div>
                 </div>
-
-                <p className="text-gray-600 text-sm mb-4 line-clamp-2">
-                  {service.description}
-                </p>
-
-                <div className="space-y-2 mb-4">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-500">Category</span>
-                    <span className="font-medium">{getCategoryLabel(service.category)}</span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-500">Price</span>
-                    <span className="font-medium">{formatCurrency(service.price)} per {service.unit}</span>
-                  </div>
-                  {service.responseTime && (
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-500">Response Time</span>
-                      <span className="font-medium">{service.responseTime}</span>
-                    </div>
-                  )}
+                <div className="service-actions">
+                  <button
+                    onClick={() => handleToggleStatus(service._id, service.isActive)}
+                    className={`action-btn ${service.isActive ? 'active' : 'inactive'}`}
+                    title={service.isActive ? 'Deactivate' : 'Activate'}
+                  >
+                    {service.isActive ? '👁️' : '🙈'}
+                  </button>
+                  <button
+                    onClick={() => startEdit(service)}
+                    className="action-btn edit"
+                    title="Edit"
+                  >
+                    ✏️
+                  </button>
+                  <button
+                    onClick={() => handleDeleteService(service._id)}
+                    className="action-btn delete"
+                    title="Delete"
+                  >
+                    🗑️
+                  </button>
                 </div>
+              </div>
 
-                <div className="flex items-center justify-between">
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                    service.isActive 
-                      ? 'bg-green-100 text-green-800' 
-                      : 'bg-gray-100 text-gray-800'
-                  }`}>
-                    {service.isActive ? 'Active' : 'Inactive'}
-                  </span>
-                  
-                  <div className="flex items-center space-x-4 text-xs text-gray-500">
-                    <div className="flex items-center">
-                      <Users className="h-3 w-3 mr-1" />
-                      <span>{service.orderCount || 0}</span>
-                    </div>
-                    <div className="flex items-center">
-                      <DollarSign className="h-3 w-3 mr-1" />
-                      <span>{formatCurrency(service.revenue || 0)}</span>
-                    </div>
+              <p className="service-description">
+                {service.description}
+              </p>
+
+              <div className="service-meta">
+                <div className="meta-item">
+                  <span className="meta-label">Category</span>
+                  <span className="meta-value">{getCategoryLabel(service.category)}</span>
+                </div>
+                <div className="meta-item">
+                  <span className="meta-label">Price</span>
+                  <span className="meta-value">{formatCurrency(service.price)} per {service.unit}</span>
+                </div>
+                {service.responseTime && (
+                  <div className="meta-item">
+                    <span className="meta-label">Response Time</span>
+                    <span className="meta-value">{service.responseTime}</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="service-footer">
+                <span className={`status-badge ${service.isActive ? 'active' : 'inactive'}`}>
+                  {service.isActive ? 'Active' : 'Inactive'}
+                </span>
+                
+                <div className="service-stats">
+                  <div className="stat-item">
+                    <span className="stat-icon">👥</span>
+                    <span className="stat-value">{service.orderCount || 0}</span>
+                  </div>
+                  <div className="stat-item">
+                    <span className="stat-icon">💰</span>
+                    <span className="stat-value">{formatCurrency(service.revenue || 0)}</span>
                   </div>
                 </div>
               </div>
-            );
-          })}
+            </div>
+          ))}
         </div>
 
         {filteredServices.length === 0 && (
-          <div className="text-center py-12">
-            <Activity className="mx-auto h-12 w-12 text-gray-400" />
-            <h3 className="mt-2 text-sm font-medium text-gray-900">No services found</h3>
-            <p className="mt-1 text-sm text-gray-500">
+          <div className="empty-state">
+            <div className="empty-icon">⚡</div>
+            <h3 className="empty-title">No services found</h3>
+            <p className="empty-description">
               {searchTerm || categoryFilter !== 'all' || statusFilter !== 'all'
                 ? 'Try adjusting your search or filters'
                 : 'Get started by creating your first AI service'
               }
             </p>
             {!searchTerm && categoryFilter === 'all' && statusFilter === 'all' && (
-              <div className="mt-6">
+              <div className="empty-action">
                 <button
                   onClick={() => setShowCreateForm(true)}
-                  className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                  className="btn btn-primary"
                 >
-                  <Plus className="mr-2 h-4 w-4" />
+                  <span className="btn-icon">➕</span>
                   Add Service
                 </button>
               </div>

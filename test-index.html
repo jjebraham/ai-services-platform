@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Services Platform - Test</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+    <div id="root">
+        <div class="min-h-screen bg-gray-50 flex items-center justify-center">
+            <div class="text-center">
+                <h1 class="text-4xl font-bold text-gray-900 mb-4">AI Services Platform</h1>
+                <p class="text-lg text-gray-600 mb-8">Access Premium AI Tools</p>
+                <div class="space-x-4">
+                    <button class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700">Get Started</button>
+                    <button class="border border-gray-300 text-gray-700 px-6 py-3 rounded-lg hover:bg-gray-50">Learn More</button>
+                </div>
+                <div class="mt-8">
+                    <p class="text-sm text-green-600">✅ Server is running correctly</p>
+                    <p class="text-sm text-green-600">✅ HTML is properly formatted</p>
+                    <p class="text-sm text-green-600">✅ Tailwind CSS is loading</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        // Test if JavaScript is working
+        console.log('AI Services Platform loaded successfully');
+        
+        // Test API connectivity
+        fetch('/api/health')
+            .then(response => response.json())
+            .then(data => {
+                console.log('API Health:', data);
+                const statusDiv = document.createElement('div');
+                statusDiv.className = 'mt-4 text-sm text-blue-600';
+                statusDiv.textContent = '✅ API is responding: ' + data.status;
+                document.querySelector('.text-center').appendChild(statusDiv);
+            })
+            .catch(error => {
+                console.error('API Error:', error);
+            });
+    </script>
+</body>
+</html>

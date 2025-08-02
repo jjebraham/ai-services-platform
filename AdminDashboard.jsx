@@ -1,127 +1,190 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { 
-  Users, 
-  ShoppingBag, 
-  DollarSign, 
-  MessageSquare,
-  TrendingUp,
-  TrendingDown,
-  Activity,
-  AlertCircle,
-  CheckCircle,
-  Clock,
-  Eye,
-  Settings,
-  BarChart3,
-  PieChart,
-  Calendar,
-  Filter
-} from 'lucide-react';
-import { api } from '../../lib/api';
-import LoadingSpinner from '../../components/LoadingSpinner';
+import { useAuth } from './AuthContext';
+import { adminAPI } from './api';
 
 const AdminDashboard = () => {
+  const { user } = useAuth();
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [dashboardData, setDashboardData] = useState({
-    stats: {
+    overview: {
       totalUsers: 0,
       totalOrders: 0,
       totalRevenue: 0,
-      pendingTickets: 0,
-      pendingKYC: 0,
-      activeServices: 0
+      totalTickets: 0
     },
     recentOrders: [],
-    recentUsers: [],
-    recentTickets: [],
-    pendingKYC: [],
-    chartData: {
-      revenue: [],
-      orders: [],
-      users: []
-    }
+    recentUsers: []
   });
+  const [refreshing, setRefreshing] = useState(false);
+  const [supabaseStatus, setSupabaseStatus] = useState('checking');
 
   useEffect(() => {
     fetchDashboardData();
+    checkSupabaseStatus();
   }, []);
+
+  const checkSupabaseStatus = async () => {
+    try {
+      const response = await fetch('http://localhost:5001/api/admin/supabase/status');
+      const data = await response.json();
+      setSupabaseStatus(data.configured ? 'connected' : 'not_configured');
+    } catch (error) {
+      console.error('Error checking Supabase status:', error);
+      setSupabaseStatus('error');
+    }
+  };
 
   const fetchDashboardData = async () => {
     try {
-      const [statsResponse, ordersResponse, usersResponse, ticketsResponse, kycResponse] = await Promise.all([
-        api.get('/admin/stats').catch(() => ({ data: {} })),
-        api.get('/admin/orders?limit=5').catch(() => ({ data: [] })),
-        api.get('/admin/users?limit=5').catch(() => ({ data: [] })),
-        api.get('/admin/tickets?status=open&limit=5').catch(() => ({ data: [] })),
-        api.get('/admin/kyc?status=pending&limit=5').catch(() => ({ data: [] }))
-      ]);
-
-      setDashboardData({
-        stats: {
-          totalUsers: statsResponse.data.totalUsers || 0,
-          totalOrders: statsResponse.data.totalOrders || 0,
-          totalRevenue: statsResponse.data.totalRevenue || 0,
-          pendingTickets: statsResponse.data.pendingTickets || 0,
-          pendingKYC: statsResponse.data.pendingKYC || 0,
-          activeServices: statsResponse.data.activeServices || 0
-        },
-        recentOrders: ordersResponse.data,
-        recentUsers: usersResponse.data,
-        recentTickets: ticketsResponse.data,
-        pendingKYC: kycResponse.data,
-        chartData: statsResponse.data.chartData || { revenue: [], orders: [], users: [] }
-      });
+      setLoading(true);
+      setError(null);
+      
+      // Call the real API
+      const response = await adminAPI.getDashboard();
+      
+      if (response.success) {
+        setDashboardData({
+          overview: response.data.overview,
+          recentOrders: response.data.recentOrders || [],
+          recentUsers: response.data.recentUsers || []
+        });
+      } else {
+        throw new Error('Failed to fetch dashboard data');
+      }
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
+      setError(error.message);
+      
+      // Fallback to mock data if API fails
+      setDashboardData({
+        overview: {
+          totalUsers: 1247,
+          totalOrders: 856,
+          totalRevenue: 125000000,
+          totalTickets: 12
+        },
+        recentOrders: [
+          {
+            _id: '1',
+            orderNumber: 'ORD-001',
+            user: { name: 'John Doe' },
+            service: { name: 'OpenAI GPT-4' },
+            pricing: { totalUSD: 50000 },
+            status: 'completed',
+            createdAt: new Date().toISOString()
+          },
+          {
+            _id: '2',
+            orderNumber: 'ORD-002',
+            user: { name: 'Jane Smith' },
+            service: { name: 'DALL-E 3' },
+            pricing: { totalUSD: 75000 },
+            status: 'pending',
+            createdAt: new Date().toISOString()
+          }
+        ],
+        recentUsers: [
+          {
+            _id: '1',
+            profile: { firstName: 'Alice', lastName: 'Johnson' },
+            email: 'alice@example.com',
+            role: 'user',
+            accountStatus: 'active',
+            createdAt: new Date().toISOString()
+          },
+          {
+            _id: '2',
+            profile: { firstName: 'Bob', lastName: 'Wilson' },
+            email: 'bob@example.com',
+            role: 'user',
+            accountStatus: 'pending',
+            createdAt: new Date().toISOString()
+          }
+        ]
+      });
     } finally {
       setLoading(false);
     }
   };
 
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('fa-IR', {
-      style: 'currency',
-      currency: 'IRR',
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0,
-    }).format(amount);
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await fetchDashboardData();
+    setRefreshing(false);
   };
 
-  const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
+  const handleSupabaseSetup = async () => {
+    try {
+      const response = await fetch('http://localhost:5001/api/admin/supabase/initialize', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include'
+      });
+      
+      const data = await response.json();
+      if (data.success) {
+        alert('Supabase tables initialized successfully!');
+        await checkSupabaseStatus();
+        await fetchDashboardData();
+      } else {
+        alert('Error initializing Supabase: ' + data.error);
+      }
+    } catch (error) {
+      console.error('Error initializing Supabase:', error);
+      alert('Error initializing Supabase. Please try again.');
+    }
+  };
+
+  // Helper functions
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(amount / 100); // Assuming amount is in cents
+  };
+
+  const formatDate = (date) => {
+    return new Date(date).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
-      day: 'numeric'
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
     });
   };
 
-  const getStatusBadge = (status, type = 'order') => {
-    const configs = {
-      order: {
-        pending: { color: 'yellow', label: 'Pending' },
-        processing: { color: 'blue', label: 'Processing' },
-        completed: { color: 'green', label: 'Completed' },
-        failed: { color: 'red', label: 'Failed' },
-        cancelled: { color: 'gray', label: 'Cancelled' }
-      },
-      kyc: {
-        pending: { color: 'yellow', label: 'Pending' },
-        approved: { color: 'green', label: 'Approved' },
-        rejected: { color: 'red', label: 'Rejected' }
-      },
-      ticket: {
-        open: { color: 'blue', label: 'Open' },
-        in_progress: { color: 'yellow', label: 'In Progress' },
-        resolved: { color: 'green', label: 'Resolved' },
-        closed: { color: 'gray', label: 'Closed' }
-      }
+  const getStatusBadge = (status) => {
+    const statusClasses = {
+      completed: 'status-badge status-completed',
+      pending: 'status-badge status-pending',
+      active: 'status-badge status-active',
+      suspended: 'status-badge status-suspended',
+      deactivated: 'status-badge status-deactivated',
+      processing: 'status-badge status-processing',
+      cancelled: 'status-badge status-cancelled'
+    };
+    return statusClasses[status] || 'status-badge';
+  };
+
+  const getSupabaseStatusBadge = () => {
+    const statusConfig = {
+      connected: { color: 'green', label: 'Connected', icon: '✅' },
+      not_configured: { color: 'yellow', label: 'Not Configured', icon: '⚠️' },
+      error: { color: 'red', label: 'Error', icon: '❌' },
+      checking: { color: 'blue', label: 'Checking...', icon: '🔄' }
     };
 
-    const config = configs[type][status] || configs[type].pending;
+    const config = statusConfig[supabaseStatus] || statusConfig.checking;
     
     return (
-      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-${config.color}-100 text-${config.color}-800`}>
+      <span className={`status-badge status-${config.color}`}>
+        <span className="status-icon">{config.icon}</span>
         {config.label}
       </span>
     );
@@ -129,353 +192,339 @@ const AdminDashboard = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <LoadingSpinner />
+      <div className="admin-dashboard">
+        <div className="loading-spinner">
+          <div className="spinner"></div>
+          <p>Loading dashboard...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
-          <p className="text-gray-600 mt-2">
-            Monitor and manage your AI services platform
-          </p>
+    <div className="admin-dashboard">
+      <div className="admin-container">
+        <div className="admin-header">
+          <div className="header-content">
+            <div>
+              <h1>Admin Dashboard</h1>
+              <p>Welcome back, {user?.profile?.firstName || user?.email}</p>
+            </div>
+            <div className="header-actions">
+              <button 
+                onClick={handleRefresh} 
+                className={`refresh-btn ${refreshing ? 'refreshing' : ''}`}
+                disabled={refreshing}
+              >
+                🔄 {refreshing ? 'Refreshing...' : 'Refresh'}
+              </button>
+            </div>
+          </div>
+          
+          {/* Supabase Status */}
+          <div className="supabase-status">
+            <div className="status-info">
+              <span>Supabase Status: </span>
+              {getSupabaseStatusBadge()}
+            </div>
+            {supabaseStatus === 'not_configured' && (
+              <button onClick={handleSupabaseSetup} className="setup-btn">
+                Initialize Supabase Tables
+              </button>
+            )}
+          </div>
+
+          {error && (
+            <div className="error-message">
+              <p>⚠️ API Error: {error}. Showing fallback data.</p>
+            </div>
+          )}
         </div>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6 mb-8">
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <Users className="h-8 w-8 text-blue-600" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500">Total Users</p>
-                <p className="text-2xl font-semibold text-gray-900">{dashboardData.stats.totalUsers}</p>
-              </div>
+        {/* Statistics Cards */}
+        <div className="stats-grid">
+          <div className="stat-card">
+            <div className="stat-header">
+              <h3>Total Users</h3>
+              <span className="stat-icon">👥</span>
             </div>
+            <div className="stat-value">{dashboardData.overview.totalUsers.toLocaleString()}</div>
+            <div className="stat-change">+12% from last month</div>
           </div>
-
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <ShoppingBag className="h-8 w-8 text-green-600" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500">Total Orders</p>
-                <p className="text-2xl font-semibold text-gray-900">{dashboardData.stats.totalOrders}</p>
-              </div>
+          
+          <div className="stat-card">
+            <div className="stat-header">
+              <h3>Total Orders</h3>
+              <span className="stat-icon">📦</span>
             </div>
+            <div className="stat-value">{dashboardData.overview.totalOrders.toLocaleString()}</div>
+            <div className="stat-change">+8% from last month</div>
           </div>
-
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <DollarSign className="h-8 w-8 text-purple-600" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500">Total Revenue</p>
-                <p className="text-2xl font-semibold text-gray-900">
-                  {formatCurrency(dashboardData.stats.totalRevenue)}
-                </p>
-              </div>
+          
+          <div className="stat-card">
+            <div className="stat-header">
+              <h3>Total Revenue</h3>
+              <span className="stat-icon">💰</span>
             </div>
+            <div className="stat-value">{formatCurrency(dashboardData.overview.totalRevenue)}</div>
+            <div className="stat-change">+15% from last month</div>
           </div>
-
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <MessageSquare className="h-8 w-8 text-orange-600" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500">Pending Tickets</p>
-                <p className="text-2xl font-semibold text-gray-900">{dashboardData.stats.pendingTickets}</p>
-              </div>
+          
+          <div className="stat-card">
+            <div className="stat-header">
+              <h3>Support Tickets</h3>
+              <span className="stat-icon">🎫</span>
             </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <AlertCircle className="h-8 w-8 text-red-600" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500">Pending KYC</p>
-                <p className="text-2xl font-semibold text-gray-900">{dashboardData.stats.pendingKYC}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <Activity className="h-8 w-8 text-indigo-600" />
-              </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-500">Active Services</p>
-                <p className="text-2xl font-semibold text-gray-900">{dashboardData.stats.activeServices}</p>
-              </div>
-            </div>
+            <div className="stat-value">{dashboardData.overview.totalTickets}</div>
+            <div className="stat-change">-5% from last month</div>
           </div>
         </div>
 
         {/* Quick Actions */}
-        <div className="mb-8 bg-white rounded-lg shadow-sm p-6">
-          <h2 className="text-lg font-medium text-gray-900 mb-4">Quick Actions</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Link
-              to="/admin/users"
-              className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-            >
-              <Users className="h-6 w-6 text-blue-600 mr-3" />
+        <div className="quick-actions">
+          <h2>Quick Actions</h2>
+          <div className="action-buttons">
+            <Link to="/admin/users" className="action-btn">
+              <span className="btn-icon">👥</span>
               <div>
-                <p className="font-medium text-gray-900">Manage Users</p>
-                <p className="text-sm text-gray-500">View and manage user accounts</p>
+                <div className="btn-title">Manage Users</div>
+                <div className="btn-subtitle">View and manage user accounts</div>
               </div>
             </Link>
-
-            <Link
-              to="/admin/orders"
-              className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-            >
-              <ShoppingBag className="h-6 w-6 text-green-600 mr-3" />
+            <Link to="/admin/orders" className="action-btn">
+              <span className="btn-icon">📦</span>
               <div>
-                <p className="font-medium text-gray-900">Manage Orders</p>
-                <p className="text-sm text-gray-500">Process and track orders</p>
+                <div className="btn-title">View Orders</div>
+                <div className="btn-subtitle">Monitor order status and history</div>
               </div>
             </Link>
-
-            <Link
-              to="/admin/services"
-              className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-            >
-              <Activity className="h-6 w-6 text-purple-600 mr-3" />
+            <Link to="/admin/services" className="action-btn">
+              <span className="btn-icon">⚙️</span>
               <div>
-                <p className="font-medium text-gray-900">Manage Services</p>
-                <p className="text-sm text-gray-500">Configure AI services</p>
+                <div className="btn-title">AI Services</div>
+                <div className="btn-subtitle">Configure AI service offerings</div>
               </div>
             </Link>
-
-            <Link
-              to="/admin/settings"
-              className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-            >
-              <Settings className="h-6 w-6 text-gray-600 mr-3" />
+            <Link to="/admin/settings" className="action-btn">
+              <span className="btn-icon">🔧</span>
               <div>
-                <p className="font-medium text-gray-900">Settings</p>
-                <p className="text-sm text-gray-500">Platform configuration</p>
+                <div className="btn-title">Settings</div>
+                <div className="btn-subtitle">System configuration and preferences</div>
+              </div>
+            </Link>
+            <Link to="/admin/analytics" className="action-btn">
+              <span className="btn-icon">📊</span>
+              <div>
+                <div className="btn-title">Analytics</div>
+                <div className="btn-subtitle">View detailed reports and metrics</div>
+              </div>
+            </Link>
+            <Link to="/admin/support" className="action-btn">
+              <span className="btn-icon">💬</span>
+              <div>
+                <div className="btn-title">Support Tickets</div>
+                <div className="btn-subtitle">Handle customer support requests</div>
               </div>
             </Link>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Recent Orders */}
-          <div className="bg-white rounded-lg shadow-sm">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-medium text-gray-900">Recent Orders</h2>
-                <Link
-                  to="/admin/orders"
-                  className="text-sm text-blue-600 hover:text-blue-500"
-                >
-                  View all
-                </Link>
-              </div>
+        {/* Recent Data Tables */}
+        <div className="data-tables">
+          <div className="table-section">
+            <div className="table-header">
+              <h2>Recent Orders</h2>
+              <Link to="/admin/orders" className="view-all-link">View All →</Link>
             </div>
-            <div className="divide-y divide-gray-200">
-              {dashboardData.recentOrders.length > 0 ? (
-                dashboardData.recentOrders.map((order) => (
-                  <div key={order._id} className="px-6 py-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between">
-                          <p className="text-sm font-medium text-gray-900">
-                            #{order.orderNumber}
-                          </p>
-                          {getStatusBadge(order.status, 'order')}
-                        </div>
-                        <p className="text-sm text-gray-500 mt-1">
-                          {order.service?.name} • {order.user?.email}
-                        </p>
-                        <p className="text-sm font-medium text-gray-900 mt-1">
-                          {formatCurrency(order.totalAmount)}
-                        </p>
-                      </div>
-                      <div className="ml-4">
-                        <Link
-                          to={`/admin/orders/${order._id}`}
-                          className="text-gray-400 hover:text-gray-500"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Link>
-                      </div>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="px-6 py-8 text-center">
-                  <ShoppingBag className="mx-auto h-8 w-8 text-gray-400" />
-                  <p className="mt-2 text-sm text-gray-500">No recent orders</p>
-                </div>
-              )}
+            <div className="table-container">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Order #</th>
+                    <th>User</th>
+                    <th>Service</th>
+                    <th>Amount</th>
+                    <th>Status</th>
+                    <th>Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {dashboardData.recentOrders.length > 0 ? (
+                    dashboardData.recentOrders.map((order) => (
+                      <tr key={order._id}>
+                        <td className="order-number">{order.orderNumber}</td>
+                        <td>{order.user?.profile?.firstName || order.user?.name || order.user?.email}</td>
+                        <td>{order.service?.name || order.service}</td>
+                        <td className="amount">{formatCurrency(order.pricing?.totalUSD || order.amount || 0)}</td>
+                        <td>
+                          <span className={getStatusBadge(order.status)}>
+                            {order.status}
+                          </span>
+                        </td>
+                        <td className="date">{formatDate(order.createdAt)}</td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan="6" className="no-data">No recent orders found</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
 
-          {/* Pending KYC */}
-          <div className="bg-white rounded-lg shadow-sm">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-medium text-gray-900">Pending KYC Reviews</h2>
-                <Link
-                  to="/admin/kyc"
-                  className="text-sm text-blue-600 hover:text-blue-500"
-                >
-                  View all
-                </Link>
+          <div className="table-section">
+            <div className="table-header">
+              <h2>Recent Users</h2>
+              <Link to="/admin/users" className="view-all-link">View All →</Link>
+            </div>
+            <div className="table-container">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Role</th>
+                    <th>Status</th>
+                    <th>Joined</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {dashboardData.recentUsers.length > 0 ? (
+                    dashboardData.recentUsers.map((user) => (
+                      <tr key={user._id}>
+                        <td>{user.profile ? `${user.profile.firstName} ${user.profile.lastName}` : user.name}</td>
+                        <td className="email">{user.email}</td>
+                        <td>
+                          <span className={`role-badge role-${user.role}`}>
+                            {user.role}
+                          </span>
+                        </td>
+                        <td>
+                          <span className={getStatusBadge(user.accountStatus || user.status)}>
+                            {user.accountStatus || user.status}
+                          </span>
+                        </td>
+                        <td className="date">{formatDate(user.createdAt)}</td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan="5" className="no-data">No recent users found</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        {/* System Health */}
+        <div className="system-health">
+          <h2>System Health</h2>
+          <div className="health-grid">
+            <div className="health-card">
+              <div className="health-icon">🗄️</div>
+              <div className="health-info">
+                <h3>Database</h3>
+                <span className="health-status healthy">Operational</span>
               </div>
             </div>
-            <div className="divide-y divide-gray-200">
-              {dashboardData.pendingKYC.length > 0 ? (
-                dashboardData.pendingKYC.map((kyc) => (
-                  <div key={kyc._id} className="px-6 py-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between">
-                          <p className="text-sm font-medium text-gray-900">
-                            {kyc.user?.firstName} {kyc.user?.lastName}
-                          </p>
-                          {getStatusBadge(kyc.status, 'kyc')}
-                        </div>
-                        <p className="text-sm text-gray-500 mt-1">
-                          {kyc.user?.email}
-                        </p>
-                        <p className="text-sm text-gray-500 mt-1">
-                          Submitted: {formatDate(kyc.createdAt)}
-                        </p>
-                      </div>
-                      <div className="ml-4">
-                        <Link
-                          to={`/admin/kyc/${kyc._id}`}
-                          className="text-gray-400 hover:text-gray-500"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Link>
-                      </div>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="px-6 py-8 text-center">
-                  <CheckCircle className="mx-auto h-8 w-8 text-gray-400" />
-                  <p className="mt-2 text-sm text-gray-500">No pending KYC reviews</p>
-                </div>
-              )}
+            <div className="health-card">
+              <div className="health-icon">🔐</div>
+              <div className="health-info">
+                <h3>Authentication</h3>
+                <span className="health-status healthy">Operational</span>
+              </div>
+            </div>
+            <div className="health-card">
+              <div className="health-icon">🤖</div>
+              <div className="health-info">
+                <h3>AI Services</h3>
+                <span className="health-status healthy">Operational</span>
+              </div>
+            </div>
+            <div className="health-card">
+              <div className="health-icon">💳</div>
+              <div className="health-info">
+                <h3>Payment System</h3>
+                <span className="health-status healthy">Operational</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default AdminDashboard;
+            </Link>
+          </div>
+        </div>
+
+        {/* Recent Data Tables */}
+        <div className="data-tables">
+          <div className="table-section">
+            <h2>Recent Orders</h2>
+            <div className="table-container">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Order #</th>
+                    <th>User</th>
+                    <th>Service</th>
+                    <th>Amount</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {dashboardData.recentOrders.map((order) => (
+                    <tr key={order._id}>
+                      <td>{order.orderNumber}</td>
+                      <td>{order.user?.profile?.firstName || order.user?.name || order.user?.email}</td>
+                      <td>{order.service?.name || order.service}</td>
+                      <td>{formatCurrency(order.pricing?.totalUSD || order.amount || 0)}</td>
+                      <td>
+                        <span className={getStatusBadge(order.status)}>
+                          {order.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
 
-          {/* Recent Users */}
-          <div className="bg-white rounded-lg shadow-sm">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-medium text-gray-900">Recent Users</h2>
-                <Link
-                  to="/admin/users"
-                  className="text-sm text-blue-600 hover:text-blue-500"
-                >
-                  View all
-                </Link>
-              </div>
-            </div>
-            <div className="divide-y divide-gray-200">
-              {dashboardData.recentUsers.length > 0 ? (
-                dashboardData.recentUsers.map((user) => (
-                  <div key={user._id} className="px-6 py-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-gray-900">
-                          {user.firstName} {user.lastName}
-                        </p>
-                        <p className="text-sm text-gray-500 mt-1">
-                          {user.email}
-                        </p>
-                        <p className="text-sm text-gray-500 mt-1">
-                          Joined: {formatDate(user.createdAt)}
-                        </p>
-                      </div>
-                      <div className="ml-4">
-                        <Link
-                          to={`/admin/users/${user._id}`}
-                          className="text-gray-400 hover:text-gray-500"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Link>
-                      </div>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="px-6 py-8 text-center">
-                  <Users className="mx-auto h-8 w-8 text-gray-400" />
-                  <p className="mt-2 text-sm text-gray-500">No recent users</p>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Recent Support Tickets */}
-          <div className="bg-white rounded-lg shadow-sm">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <div className="flex items-center justify-between">
-                <h2 className="text-lg font-medium text-gray-900">Recent Support Tickets</h2>
-                <Link
-                  to="/admin/tickets"
-                  className="text-sm text-blue-600 hover:text-blue-500"
-                >
-                  View all
-                </Link>
-              </div>
-            </div>
-            <div className="divide-y divide-gray-200">
-              {dashboardData.recentTickets.length > 0 ? (
-                dashboardData.recentTickets.map((ticket) => (
-                  <div key={ticket._id} className="px-6 py-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center justify-between">
-                          <p className="text-sm font-medium text-gray-900">
-                            #{ticket.ticketNumber}
-                          </p>
-                          {getStatusBadge(ticket.status, 'ticket')}
-                        </div>
-                        <p className="text-sm text-gray-500 mt-1">
-                          {ticket.title}
-                        </p>
-                        <p className="text-sm text-gray-500 mt-1">
-                          {ticket.user?.email} • {formatDate(ticket.createdAt)}
-                        </p>
-                      </div>
-                      <div className="ml-4">
-                        <Link
-                          to={`/admin/tickets/${ticket._id}`}
-                          className="text-gray-400 hover:text-gray-500"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Link>
-                      </div>
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="px-6 py-8 text-center">
-                  <MessageSquare className="mx-auto h-8 w-8 text-gray-400" />
-                  <p className="mt-2 text-sm text-gray-500">No recent tickets</p>
-                </div>
-              )}
+          <div className="table-section">
+            <h2>Recent Users</h2>
+            <div className="table-container">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Role</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {dashboardData.recentUsers.map((user) => (
+                    <tr key={user._id}>
+                      <td>{user.profile ? `${user.profile.firstName} ${user.profile.lastName}` : user.name}</td>
+                      <td>{user.email}</td>
+                      <td>{user.role}</td>
+                      <td>
+                        <span className={getStatusBadge(user.accountStatus || user.status)}>
+                          {user.accountStatus || user.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
         </div>

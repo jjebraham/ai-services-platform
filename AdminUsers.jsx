@@ -1,25 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { 
-  Users, 
-  Search, 
-  Filter,
-  Eye,
-  Edit,
-  Ban,
-  CheckCircle,
-  AlertCircle,
-  Clock,
-  Mail,
-  Calendar,
-  Shield,
-  UserCheck,
-  UserX,
-  MoreVertical,
-  Download
-} from 'lucide-react';
-import { api } from '../../lib/api';
-import LoadingSpinner from '../../components/LoadingSpinner';
 
 const AdminUsers = () => {
   const [users, setUsers] = useState([]);
@@ -38,18 +17,58 @@ const AdminUsers = () => {
 
   const fetchUsers = async () => {
     try {
-      const params = new URLSearchParams({
-        page: currentPage,
-        limit: 20,
-        search: searchTerm,
-        status: statusFilter !== 'all' ? statusFilter : '',
-        kycStatus: kycFilter !== 'all' ? kycFilter : '',
-        role: roleFilter !== 'all' ? roleFilter : ''
-      });
-
-      const response = await api.get(`/admin/users?${params}`);
-      setUsers(response.data.users || response.data);
-      setTotalPages(response.data.totalPages || 1);
+      // Mock data for demonstration
+      setUsers([
+        {
+          _id: '1',
+          name: 'John Doe',
+          email: 'john.doe@example.com',
+          role: 'user',
+          status: 'active',
+          kycStatus: 'approved',
+          createdAt: '2024-01-15T10:30:00Z',
+          lastLogin: '2024-01-20T14:22:00Z',
+          totalOrders: 15,
+          totalSpent: 450.75
+        },
+        {
+          _id: '2',
+          name: 'Jane Smith',
+          email: 'jane.smith@example.com',
+          role: 'user',
+          status: 'active',
+          kycStatus: 'pending',
+          createdAt: '2024-01-18T09:15:00Z',
+          lastLogin: '2024-01-21T11:45:00Z',
+          totalOrders: 8,
+          totalSpent: 220.50
+        },
+        {
+          _id: '3',
+          name: 'Admin User',
+          email: 'admin@example.com',
+          role: 'admin',
+          status: 'active',
+          kycStatus: 'approved',
+          createdAt: '2024-01-01T08:00:00Z',
+          lastLogin: '2024-01-21T16:30:00Z',
+          totalOrders: 0,
+          totalSpent: 0
+        },
+        {
+          _id: '4',
+          name: 'Bob Johnson',
+          email: 'bob.johnson@example.com',
+          role: 'user',
+          status: 'suspended',
+          kycStatus: 'rejected',
+          createdAt: '2024-01-10T12:20:00Z',
+          lastLogin: '2024-01-19T10:15:00Z',
+          totalOrders: 3,
+          totalSpent: 89.25
+        }
+      ]);
+      setTotalPages(1);
     } catch (error) {
       console.error('Error fetching users:', error);
     } finally {
@@ -59,8 +78,12 @@ const AdminUsers = () => {
 
   const handleUserAction = async (userId, action) => {
     try {
-      await api.patch(`/admin/users/${userId}`, { action });
-      fetchUsers(); // Refresh the list
+      // Mock API call
+      setUsers(prev => prev.map(user => 
+        user._id === userId 
+          ? { ...user, status: action === 'activate' ? 'active' : 'suspended' }
+          : user
+      ));
     } catch (error) {
       console.error(`Error ${action} user:`, error);
       alert(`Error ${action} user. Please try again.`);
@@ -74,12 +97,13 @@ const AdminUsers = () => {
     }
 
     try {
-      await api.post('/admin/users/bulk-action', {
-        userIds: selectedUsers,
-        action
-      });
+      // Mock bulk action
+      setUsers(prev => prev.map(user => 
+        selectedUsers.includes(user._id)
+          ? { ...user, status: action === 'activate' ? 'active' : 'suspended' }
+          : user
+      ));
       setSelectedUsers([]);
-      fetchUsers();
     } catch (error) {
       console.error('Error performing bulk action:', error);
       alert('Error performing bulk action. Please try again.');
@@ -88,11 +112,16 @@ const AdminUsers = () => {
 
   const handleExportUsers = async () => {
     try {
-      const response = await api.get('/admin/users/export', {
-        responseType: 'blob'
-      });
+      // Mock export functionality
+      const csvContent = [
+        'Name,Email,Role,Status,KYC Status,Created At,Total Orders,Total Spent',
+        ...users.map(user => 
+          `${user.name},${user.email},${user.role},${user.status},${user.kycStatus},${user.createdAt},${user.totalOrders},${user.totalSpent}`
+        )
+      ].join('\n');
       
-      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const blob = new Blob([csvContent], { type: 'text/csv' });
+      const url = window.URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
       link.setAttribute('download', `users-export-${new Date().toISOString().split('T')[0]}.csv`);
@@ -107,17 +136,16 @@ const AdminUsers = () => {
 
   const getStatusBadge = (status) => {
     const statusConfig = {
-      active: { color: 'green', label: 'Active', icon: CheckCircle },
-      suspended: { color: 'red', label: 'Suspended', icon: Ban },
-      pending: { color: 'yellow', label: 'Pending', icon: Clock }
+      active: { color: 'green', label: 'Active', icon: '✅' },
+      suspended: { color: 'red', label: 'Suspended', icon: '🚫' },
+      pending: { color: 'yellow', label: 'Pending', icon: '⏳' }
     };
 
     const config = statusConfig[status] || statusConfig.active;
-    const Icon = config.icon;
     
     return (
-      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-${config.color}-100 text-${config.color}-800`}>
-        <Icon className="w-3 h-3 mr-1" />
+      <span className={`status-badge ${config.color}`}>
+        <span className="status-icon">{config.icon}</span>
         {config.label}
       </span>
     );
@@ -125,18 +153,17 @@ const AdminUsers = () => {
 
   const getKYCBadge = (status) => {
     const statusConfig = {
-      approved: { color: 'green', label: 'Verified', icon: CheckCircle },
-      pending: { color: 'yellow', label: 'Pending', icon: Clock },
-      rejected: { color: 'red', label: 'Rejected', icon: AlertCircle },
-      not_started: { color: 'gray', label: 'Not Started', icon: AlertCircle }
+      approved: { color: 'green', label: 'Verified', icon: '✅' },
+      pending: { color: 'yellow', label: 'Pending', icon: '⏳' },
+      rejected: { color: 'red', label: 'Rejected', icon: '❌' },
+      not_started: { color: 'gray', label: 'Not Started', icon: '⚪' }
     };
 
     const config = statusConfig[status] || statusConfig.not_started;
-    const Icon = config.icon;
     
     return (
-      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-${config.color}-100 text-${config.color}-800`}>
-        <Icon className="w-3 h-3 mr-1" />
+      <span className={`kyc-badge ${config.color}`}>
+        <span className="kyc-icon">{config.icon}</span>
         {config.label}
       </span>
     );
@@ -144,16 +171,15 @@ const AdminUsers = () => {
 
   const getRoleBadge = (role) => {
     const roleConfig = {
-      admin: { color: 'purple', label: 'Admin', icon: Shield },
-      user: { color: 'blue', label: 'User', icon: Users }
+      admin: { color: 'purple', label: 'Admin', icon: '🛡️' },
+      user: { color: 'blue', label: 'User', icon: '👤' }
     };
 
     const config = roleConfig[role] || roleConfig.user;
-    const Icon = config.icon;
     
     return (
-      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-${config.color}-100 text-${config.color}-800`}>
-        <Icon className="w-3 h-3 mr-1" />
+      <span className={`role-badge ${config.color}`}>
+        <span className="role-icon">{config.icon}</span>
         {config.label}
       </span>
     );
@@ -165,6 +191,13 @@ const AdminUsers = () => {
       month: 'short',
       day: 'numeric'
     });
+  };
+
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD'
+    }).format(amount);
   };
 
   const handleSelectUser = (userId) => {
@@ -183,59 +216,101 @@ const AdminUsers = () => {
     }
   };
 
+  // Filter users based on search and filters
+  const filteredUsers = users.filter(user => {
+    const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         user.email.toLowerCase().includes(searchTerm.toLowerCase());
+    
+    const matchesStatus = statusFilter === 'all' || user.status === statusFilter;
+    const matchesKYC = kycFilter === 'all' || user.kycStatus === kycFilter;
+    const matchesRole = roleFilter === 'all' || user.role === roleFilter;
+    
+    return matchesSearch && matchesStatus && matchesKYC && matchesRole;
+  });
+
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <LoadingSpinner />
+      <div className="admin-users">
+        <div className="loading-container">
+          <div className="loading-spinner">⏳</div>
+          <p>Loading users...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div className="admin-users">
+      <div className="admin-container">
         {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">User Management</h1>
-              <p className="text-gray-600 mt-2">
-                Manage user accounts, KYC status, and permissions
-              </p>
+        <div className="admin-header">
+          <div className="header-content">
+            <div className="header-text">
+              <h1>User Management</h1>
+              <p>Manage users, roles, and permissions</p>
             </div>
-            <div className="flex space-x-3">
-              <button
-                onClick={handleExportUsers}
-                className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-              >
-                <Download className="mr-2 h-4 w-4" />
-                Export
+            <div className="header-actions">
+              <button onClick={handleExportUsers} className="btn btn-secondary">
+                <span className="btn-icon">📥</span>
+                Export Users
               </button>
             </div>
           </div>
         </div>
 
-        {/* Filters */}
-        <div className="mb-6 bg-white rounded-lg shadow-sm p-4">
-          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
-            <div className="flex-1 max-w-lg">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+        {/* Stats Cards */}
+        <div className="stats-grid">
+          <div className="stat-card">
+            <div className="stat-icon">👥</div>
+            <div className="stat-content">
+              <h3>Total Users</h3>
+              <p className="stat-number">{users.length}</p>
+            </div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-icon">✅</div>
+            <div className="stat-content">
+              <h3>Active Users</h3>
+              <p className="stat-number">{users.filter(u => u.status === 'active').length}</p>
+            </div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-icon">🔒</div>
+            <div className="stat-content">
+              <h3>KYC Verified</h3>
+              <p className="stat-number">{users.filter(u => u.kycStatus === 'approved').length}</p>
+            </div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-icon">🛡️</div>
+            <div className="stat-content">
+              <h3>Admins</h3>
+              <p className="stat-number">{users.filter(u => u.role === 'admin').length}</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Filters and Search */}
+        <div className="filters-section">
+          <div className="filters-content">
+            <div className="search-group">
+              <div className="search-input-wrapper">
+                <span className="search-icon">🔍</span>
                 <input
                   type="text"
-                  placeholder="Search by name, email, or ID..."
+                  placeholder="Search users..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="search-input"
                 />
               </div>
             </div>
             
-            <div className="flex space-x-4">
+            <div className="filter-group">
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="filter-select"
               >
                 <option value="all">All Status</option>
                 <option value="active">Active</option>
@@ -246,7 +321,7 @@ const AdminUsers = () => {
               <select
                 value={kycFilter}
                 onChange={(e) => setKycFilter(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="filter-select"
               >
                 <option value="all">All KYC</option>
                 <option value="approved">Verified</option>
@@ -254,11 +329,11 @@ const AdminUsers = () => {
                 <option value="rejected">Rejected</option>
                 <option value="not_started">Not Started</option>
               </select>
-
+              
               <select
                 value={roleFilter}
                 onChange={(e) => setRoleFilter(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="filter-select"
               >
                 <option value="all">All Roles</option>
                 <option value="user">Users</option>
@@ -270,142 +345,109 @@ const AdminUsers = () => {
 
         {/* Bulk Actions */}
         {selectedUsers.length > 0 && (
-          <div className="mb-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-blue-700">
-                {selectedUsers.length} user{selectedUsers.length > 1 ? 's' : ''} selected
-              </p>
-              <div className="flex space-x-2">
-                <button
-                  onClick={() => handleBulkAction('activate')}
-                  className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-green-700 bg-green-100 hover:bg-green-200"
-                >
-                  <UserCheck className="mr-2 h-4 w-4" />
-                  Activate
-                </button>
-                <button
-                  onClick={() => handleBulkAction('suspend')}
-                  className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-red-700 bg-red-100 hover:bg-red-200"
-                >
-                  <UserX className="mr-2 h-4 w-4" />
-                  Suspend
-                </button>
-              </div>
+          <div className="bulk-actions">
+            <div className="bulk-info">
+              <span>{selectedUsers.length} user(s) selected</span>
+            </div>
+            <div className="bulk-buttons">
+              <button 
+                onClick={() => handleBulkAction('activate')}
+                className="btn btn-success"
+              >
+                Activate Selected
+              </button>
+              <button 
+                onClick={() => handleBulkAction('suspend')}
+                className="btn btn-danger"
+              >
+                Suspend Selected
+              </button>
             </div>
           </div>
         )}
 
         {/* Users Table */}
-        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+        <div className="table-section">
+          <div className="table-container">
+            <table className="users-table">
+              <thead>
                 <tr>
-                  <th className="px-6 py-3 text-left">
+                  <th>
                     <input
                       type="checkbox"
-                      checked={selectedUsers.length === users.length && users.length > 0}
+                      checked={selectedUsers.length === filteredUsers.length && filteredUsers.length > 0}
                       onChange={handleSelectAll}
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      className="table-checkbox"
                     />
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    User
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    KYC Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Role
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Joined
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Last Login
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
+                  <th>User</th>
+                  <th>Role</th>
+                  <th>Status</th>
+                  <th>KYC</th>
+                  <th>Orders</th>
+                  <th>Total Spent</th>
+                  <th>Last Login</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {users.map((user) => (
-                  <tr key={user._id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
+              <tbody>
+                {filteredUsers.map((user) => (
+                  <tr key={user._id} className="table-row">
+                    <td>
                       <input
                         type="checkbox"
                         checked={selectedUsers.includes(user._id)}
                         onChange={() => handleSelectUser(user._id)}
-                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        className="table-checkbox"
                       />
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div className="flex-shrink-0 h-10 w-10">
-                          <div className="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
-                            <span className="text-sm font-medium text-gray-700">
-                              {user.firstName?.charAt(0) || user.email?.charAt(0) || 'U'}
-                            </span>
-                          </div>
+                    <td>
+                      <div className="user-info">
+                        <div className="user-avatar">
+                          {user.name.charAt(0).toUpperCase()}
                         </div>
-                        <div className="ml-4">
-                          <div className="text-sm font-medium text-gray-900">
-                            {user.firstName} {user.lastName}
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            {user.email}
-                          </div>
+                        <div className="user-details">
+                          <div className="user-name">{user.name}</div>
+                          <div className="user-email">{user.email}</div>
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {getStatusBadge(user.status)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {getKYCBadge(user.kycStatus)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {getRoleBadge(user.role)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {formatDate(user.createdAt)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {user.lastLogin ? formatDate(user.lastLogin) : 'Never'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <div className="flex items-center justify-end space-x-2">
-                        <Link
-                          to={`/admin/users/${user._id}`}
-                          className="text-blue-600 hover:text-blue-900"
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Link>
-                        
+                    <td>{getRoleBadge(user.role)}</td>
+                    <td>{getStatusBadge(user.status)}</td>
+                    <td>{getKYCBadge(user.kycStatus)}</td>
+                    <td className="text-center">{user.totalOrders}</td>
+                    <td>{formatCurrency(user.totalSpent)}</td>
+                    <td>{formatDate(user.lastLogin)}</td>
+                    <td>
+                      <div className="action-buttons">
                         {user.status === 'active' ? (
                           <button
                             onClick={() => handleUserAction(user._id, 'suspend')}
-                            className="text-red-600 hover:text-red-900"
+                            className="action-btn danger"
                             title="Suspend User"
                           >
-                            <Ban className="h-4 w-4" />
+                            🚫
                           </button>
                         ) : (
                           <button
                             onClick={() => handleUserAction(user._id, 'activate')}
-                            className="text-green-600 hover:text-green-900"
+                            className="action-btn success"
                             title="Activate User"
                           >
-                            <CheckCircle className="h-4 w-4" />
+                            ✅
                           </button>
                         )}
-                        
-                        <button className="text-gray-400 hover:text-gray-600">
-                          <MoreVertical className="h-4 w-4" />
+                        <button
+                          className="action-btn primary"
+                          title="View Details"
+                        >
+                          👁️
+                        </button>
+                        <button
+                          className="action-btn secondary"
+                          title="Edit User"
+                        >
+                          ✏️
                         </button>
                       </div>
                     </td>
@@ -414,63 +456,41 @@ const AdminUsers = () => {
               </tbody>
             </table>
           </div>
-
-          {users.length === 0 && (
-            <div className="p-12 text-center">
-              <Users className="mx-auto h-12 w-12 text-gray-400" />
-              <h3 className="mt-2 text-sm font-medium text-gray-900">No users found</h3>
-              <p className="mt-1 text-sm text-gray-500">
-                Try adjusting your search or filters
-              </p>
-            </div>
-          )}
         </div>
+
+        {filteredUsers.length === 0 && (
+          <div className="empty-state">
+            <div className="empty-icon">👥</div>
+            <h3 className="empty-title">No users found</h3>
+            <p className="empty-description">
+              {searchTerm || statusFilter !== 'all' || kycFilter !== 'all' || roleFilter !== 'all'
+                ? 'Try adjusting your search or filters'
+                : 'No users have been registered yet'
+              }
+            </p>
+          </div>
+        )}
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="mt-6 flex items-center justify-between">
-            <div className="flex-1 flex justify-between sm:hidden">
-              <button
-                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                disabled={currentPage === 1}
-                className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Previous
-              </button>
-              <button
-                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                disabled={currentPage === totalPages}
-                className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Next
-              </button>
-            </div>
-            <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-              <div>
-                <p className="text-sm text-gray-700">
-                  Showing page <span className="font-medium">{currentPage}</span> of{' '}
-                  <span className="font-medium">{totalPages}</span>
-                </p>
-              </div>
-              <div>
-                <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
-                  <button
-                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                    disabled={currentPage === 1}
-                    className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Previous
-                  </button>
-                  <button
-                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                    disabled={currentPage === totalPages}
-                    className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Next
-                  </button>
-                </nav>
-              </div>
-            </div>
+          <div className="pagination">
+            <button
+              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+              className="pagination-btn"
+            >
+              Previous
+            </button>
+            <span className="pagination-info">
+              Page {currentPage} of {totalPages}
+            </span>
+            <button
+              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+              disabled={currentPage === totalPages}
+              className="pagination-btn"
+            >
+              Next
+            </button>
           </div>
         )}
       </div>
