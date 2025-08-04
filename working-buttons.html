@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Services Platform - Enhanced</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+    <div id="root">
+        <div class="min-h-screen bg-gray-50 flex items-center justify-center">
+            <div class="text-center">
+                <h1 class="text-4xl font-bold text-gray-900 mb-4">AI Services Platform</h1>
+                <p class="text-lg text-gray-600 mb-8">Access Premium AI Tools</p>
+                <div class="space-x-4">
+                    <button id="getStartedBtn" class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors duration-200">Get Started</button>
+                    <button id="learnMoreBtn" class="border border-gray-300 text-gray-700 px-6 py-3 rounded-lg hover:bg-gray-50 transition-colors duration-200">Learn More</button>
+                </div>
+                <div id="statusMessage" class="mt-8 hidden">
+                    <p class="text-sm text-green-600">✅ Action completed successfully!</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for Get Started -->
+    <div id="getStartedModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg p-8 max-w-md w-full mx-4">
+            <h2 class="text-2xl font-bold text-gray-900 mb-4">Welcome to AI Services!</h2>
+            <p class="text-gray-600 mb-6">Choose how you'd like to get started with our AI platform:</p>
+            <div class="space-y-3">
+                <button id="createAccountBtn" class="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors">Create Account</button>
+                <button id="tryDemoBtn" class="w-full border border-gray-300 text-gray-700 py-3 px-4 rounded-lg hover:bg-gray-50 transition-colors">Try Demo</button>
+                <button id="viewServicesBtn" class="w-full bg-green-600 text-white py-3 px-4 rounded-lg hover:bg-green-700 transition-colors">View Services</button>
+            </div>
+            <button id="closeModal" class="mt-4 w-full text-gray-500 hover:text-gray-700">Close</button>
+        </div>
+    </div>
+
+    <!-- Create Account Modal -->
+    <div id="createAccountModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg p-8 max-w-md w-full mx-4">
+            <h2 class="text-2xl font-bold text-gray-900 mb-4">Create Your Account</h2>
+            <form id="signupForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+                    <input type="text" id="fullName" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter your full name" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                    <input type="email" id="email" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter your email" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                    <input type="password" id="password" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Create a password" required>
+                </div>
+                <button type="submit" class="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors">Create Account</button>
+            </form>
+            <button id="closeCreateAccountModal" class="mt-4 w-full text-gray-500 hover:text-gray-700">Back</button>
+        </div>
+    </div>
+
+    <!-- Try Demo Modal -->
+    <div id="tryDemoModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg p-8 max-w-lg w-full mx-4">
+            <h2 class="text-2xl font-bold text-gray-900 mb-4">Try Our AI Demo</h2>
+            <p class="text-gray-600 mb-6">Experience our AI capabilities with these interactive demos:</p>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="bg-blue-50 p-4 rounded-lg cursor-pointer hover:bg-blue-100 transition-colors" onclick="runDemo('text-analysis')">
+                    <h3 class="font-semibold text-blue-900">Text Analysis</h3>
+                    <p class="text-sm text-blue-700">Analyze sentiment and extract insights</p>
+                </div>
+                <div class="bg-green-50 p-4 rounded-lg cursor-pointer hover:bg-green-100 transition-colors" onclick="runDemo('image-recognition')">
+                    <h3 class="font-semibold text-green-900">Image Recognition</h3>
+                    <p class="text-sm text-green-700">Identify objects and scenes</p>
+                </div>
+                <div class="bg-purple-50 p-4 rounded-lg cursor-pointer hover:bg-purple-100 transition-colors" onclick="runDemo('chatbot')">
+                    <h3 class="font-semibold text-purple-900">AI Chatbot</h3>
+                    <p class="text-sm text-purple-700">Conversational AI assistant</p>
+                </div>
+                <div class="bg-orange-50 p-4 rounded-lg cursor-pointer hover:bg-orange-100 transition-colors" onclick="runDemo('data-insights')">
+                    <h3 class="font-semibold text-orange-900">Data Insights</h3>
+                    <p class="text-sm text-orange-700">Generate reports and analytics</p>
+                </div>
+            </div>
+            <div id="demoResult" class="mt-6 p-4 bg-gray-50 rounded-lg hidden">
+                <h4 class="font-semibold text-gray-900 mb-2">Demo Result:</h4>
+                <p id="demoOutput" class="text-gray-700"></p>
+            </div>
+            <button id="closeTryDemoModal" class="mt-6 w-full bg-gray-600 text-white py-3 px-4 rounded-lg hover:bg-gray-700 transition-colors">Back</button>
+        </div>
+    </div>
+
+    <!-- View Services Modal -->
+    <div id="viewServicesModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg p-8 max-w-4xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <h2 class="text-2xl font-bold text-gray-900 mb-4">Our AI Services</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div class="border border-gray-200 rounded-lg p-6 hover:shadow-lg transition-shadow">
+                    <div class="bg-blue-100 w-12 h-12 rounded-lg flex items-center justify-center mb-4">
+                        <span class="text-blue-600 text-xl">🤖</span>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-2">AI Chatbots</h3>
+                    <p class="text-gray-600 mb-4">Intelligent conversational AI for customer support and engagement.</p>
+                    <div class="text-sm text-gray-500 mb-4">Starting at $99/month</div>
+                    <button class="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 transition-colors" onclick="selectService('chatbot')">Select Plan</button>
+                </div>
+                
+                <div class="border border-gray-200 rounded-lg p-6 hover:shadow-lg transition-shadow">
+                    <div class="bg-green-100 w-12 h-12 rounded-lg flex items-center justify-center mb-4">
+                        <span class="text-green-600 text-xl">📊</span>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-2">Data Analytics</h3>
+                    <p class="text-gray-600 mb-4">Advanced AI-powered data analysis and predictive modeling.</p>
+                    <div class="text-sm text-gray-500 mb-4">Starting at $199/month</div>
+                    <button class="w-full bg-green-600 text-white py-2 px-4 rounded-lg hover:bg-green-700 transition-colors" onclick="selectService('analytics')">Select Plan</button>
+                </div>
+                
+                <div class="border border-gray-200 rounded-lg p-6 hover:shadow-lg transition-shadow">
+                    <div class="bg-purple-100 w-12 h-12 rounded-lg flex items-center justify-center mb-4">
+                        <span class="text-purple-600 text-xl">🖼️</span>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-2">Computer Vision</h3>
+                    <p class="text-gray-600 mb-4">Image and video analysis, object detection, and recognition.</p>
+                    <div class="text-sm text-gray-500 mb-4">Starting at $149/month</div>
+                    <button class="w-full bg-purple-600 text-white py-2 px-4 rounded-lg hover:bg-purple-700 transition-colors" onclick="selectService('vision')">Select Plan</button>
+                </div>
+                
+                <div class="border border-gray-200 rounded-lg p-6 hover:shadow-lg transition-shadow">
+                    <div class="bg-orange-100 w-12 h-12 rounded-lg flex items-center justify-center mb-4">
+                        <span class="text-orange-600 text-xl">📝</span>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-2">Natural Language</h3>
+                    <p class="text-gray-600 mb-4">Text processing, sentiment analysis, and language understanding.</p>
+                    <div class="text-sm text-gray-500 mb-4">Starting at $129/month</div>
+                    <button class="w-full bg-orange-600 text-white py-2 px-4 rounded-lg hover:bg-orange-700 transition-colors" onclick="selectService('nlp')">Select Plan</button>
+                </div>
+                
+                <div class="border border-gray-200 rounded-lg p-6 hover:shadow-lg transition-shadow">
+                    <div class="bg-red-100 w-12 h-12 rounded-lg flex items-center justify-center mb-4">
+                        <span class="text-red-600 text-xl">🔮</span>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-2">Predictive AI</h3>
+                    <p class="text-gray-600 mb-4">Forecasting and prediction models for business intelligence.</p>
+                    <div class="text-sm text-gray-500 mb-4">Starting at $299/month</div>
+                    <button class="w-full bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700 transition-colors" onclick="selectService('predictive')">Select Plan</button>
+                </div>
+                
+                <div class="border border-gray-200 rounded-lg p-6 hover:shadow-lg transition-shadow">
+                    <div class="bg-indigo-100 w-12 h-12 rounded-lg flex items-center justify-center mb-4">
+                        <span class="text-indigo-600 text-xl">⚡</span>
+                    </div>
+                    <h3 class="text-lg font-semibold text-gray-900 mb-2">Custom AI</h3>
+                    <p class="text-gray-600 mb-4">Tailored AI solutions designed specifically for your business needs.</p>
+                    <div class="text-sm text-gray-500 mb-4">Contact for pricing</div>
+                    <button class="w-full bg-indigo-600 text-white py-2 px-4 rounded-lg hover:bg-indigo-700 transition-colors" onclick="selectService('custom')">Contact Sales</button>
+                </div>
+            </div>
+            <button id="closeViewServicesModal" class="mt-6 w-full bg-gray-600 text-white py-3 px-4 rounded-lg hover:bg-gray-700 transition-colors">Back</button>
+        </div>
+    </div>
+
+    <!-- Learn More Modal -->
+    <div id="learnMoreModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg p-8 max-w-lg w-full mx-4">
+            <h2 class="text-2xl font-bold text-gray-900 mb-4">About AI Services Platform</h2>
+            <div class="text-gray-600 space-y-4">
+                <p>Our AI Services Platform provides cutting-edge artificial intelligence tools and services to help businesses and individuals leverage the power of AI.</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+                    <div class="bg-blue-50 p-4 rounded-lg">
+                        <h3 class="font-semibold text-blue-900">AI Analytics</h3>
+                        <p class="text-sm text-blue-700">Advanced data analysis and insights</p>
+                    </div>
+                    <div class="bg-green-50 p-4 rounded-lg">
+                        <h3 class="font-semibold text-green-900">Machine Learning</h3>
+                        <p class="text-sm text-green-700">Custom ML models and training</p>
+                    </div>
+                    <div class="bg-purple-50 p-4 rounded-lg">
+                        <h3 class="font-semibold text-purple-900">Natural Language</h3>
+                        <p class="text-sm text-purple-700">Text processing and understanding</p>
+                    </div>
+                    <div class="bg-orange-50 p-4 rounded-lg">
+                        <h3 class="font-semibold text-orange-900">Computer Vision</h3>
+                        <p class="text-sm text-orange-700">Image and video analysis</p>
+                    </div>
+                </div>
+            </div>
+            <button id="closeLearnMoreModal" class="mt-6 w-full bg-gray-600 text-white py-3 px-4 rounded-lg hover:bg-gray-700 transition-colors">Close</button>
+        </div>
+    </div>
+
+    <script>
+        // Show status message function
+        function showStatusMessage(message) {
+            const statusMessage = document.getElementById('statusMessage');
+            statusMessage.querySelector('p').textContent = message;
+            statusMessage.classList.remove('hidden');
+            setTimeout(() => {
+                statusMessage.classList.add('hidden');
+            }, 3000);
+        }
+
+        // Get Started Button Functionality
+        document.getElementById('getStartedBtn').addEventListener('click', function() {
+            console.log('Get Started button clicked');
+            document.getElementById('getStartedModal').classList.remove('hidden');
+        });
+
+        // Create Account Button
+        document.getElementById('createAccountBtn').addEventListener('click', function() {
+            console.log('Create Account button clicked');
+            document.getElementById('getStartedModal').classList.add('hidden');
+            document.getElementById('createAccountModal').classList.remove('hidden');
+        });
+
+        // Try Demo Button
+        document.getElementById('tryDemoBtn').addEventListener('click', function() {
+            console.log('Try Demo button clicked');
+            document.getElementById('getStartedModal').classList.add('hidden');
+            document.getElementById('tryDemoModal').classList.remove('hidden');
+        });
+
+        // View Services Button
+        document.getElementById('viewServicesBtn').addEventListener('click', function() {
+            console.log('View Services button clicked');
+            document.getElementById('getStartedModal').classList.add('hidden');
+            document.getElementById('viewServicesModal').classList.remove('hidden');
+        });
+
+        // Learn More Button Functionality
+        document.getElementById('learnMoreBtn').addEventListener('click', function() {
+            console.log('Learn More button clicked');
+            document.getElementById('learnMoreModal').classList.remove('hidden');
+        });
+
+        // Signup Form Submission
+        document.getElementById('signupForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const fullName = document.getElementById('fullName').value;
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            console.log('Account creation attempted:', { fullName, email });
+            
+            // Simulate account creation
+            setTimeout(() => {
+                document.getElementById('createAccountModal').classList.add('hidden');
+                showStatusMessage(`✅ Account created successfully for ${fullName}!`);
+                
+                // Reset form
+                document.getElementById('signupForm').reset();
+            }, 1000);
+        });
+
+        // Demo Functions
+        function runDemo(demoType) {
+            console.log('Running demo:', demoType);
+            const demoResult = document.getElementById('demoResult');
+            const demoOutput = document.getElementById('demoOutput');
+            
+            let output = '';
+            switch(demoType) {
+                case 'text-analysis':
+                    output = 'Sample text: "I love this product!" → Sentiment: Positive (95% confidence)';
+                    break;
+                case 'image-recognition':
+                    output = 'Detected objects: Car (98%), Person (92%), Tree (87%)';
+                    break;
+                case 'chatbot':
+                    output = 'AI: Hello! I\'m your AI assistant. How can I help you today?';
+                    break;
+                case 'data-insights':
+                    output = 'Sales forecast: 23% increase expected next quarter based on current trends';
+                    break;
+            }
+            
+            demoOutput.textContent = output;
+            demoResult.classList.remove('hidden');
+            showStatusMessage(`✅ ${demoType.replace('-', ' ')} demo completed!`);
+        }
+
+        // Service Selection
+        function selectService(serviceType) {
+            console.log('Service selected:', serviceType);
+            document.getElementById('viewServicesModal').classList.add('hidden');
+            
+            const serviceNames = {
+                'chatbot': 'AI Chatbots',
+                'analytics': 'Data Analytics',
+                'vision': 'Computer Vision',
+                'nlp': 'Natural Language Processing',
+                'predictive': 'Predictive AI',
+                'custom': 'Custom AI Solutions'
+            };
+            
+            showStatusMessage(`✅ ${serviceNames[serviceType]} plan selected! Contact sales for setup.`);
+        }
+
+        // Close Modal Functions
+        document.getElementById('closeModal').addEventListener('click', function() {
+            document.getElementById('getStartedModal').classList.add('hidden');
+        });
+
+        document.getElementById('closeCreateAccountModal').addEventListener('click', function() {
+            document.getElementById('createAccountModal').classList.add('hidden');
+            document.getElementById('getStartedModal').classList.remove('hidden');
+        });
+
+        document.getElementById('closeTryDemoModal').addEventListener('click', function() {
+            document.getElementById('tryDemoModal').classList.add('hidden');
+            document.getElementById('getStartedModal').classList.remove('hidden');
+        });
+
+        document.getElementById('closeViewServicesModal').addEventListener('click', function() {
+            document.getElementById('viewServicesModal').classList.add('hidden');
+            document.getElementById('getStartedModal').classList.remove('hidden');
+        });
+
+        document.getElementById('closeLearnMoreModal').addEventListener('click', function() {
+            document.getElementById('learnMoreModal').classList.add('hidden');
+        });
+
+        // Close modals when clicking outside
+        const modals = ['getStartedModal', 'createAccountModal', 'tryDemoModal', 'viewServicesModal', 'learnMoreModal'];
+        modals.forEach(modalId => {
+            document.getElementById(modalId).addEventListener('click', function(e) {
+                if (e.target === this) {
+                    this.classList.add('hidden');
+                }
+            });
+        });
+
+        // Test API connectivity
+        fetch('/api/health')
+            .then(response => response.json())
+            .then(data => {
+                console.log('API Health:', data);
+            })
+            .catch(error => {
+                console.error('API Error:', error);
+            });
+
+        // Add interactive effects
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('AI Services Platform loaded successfully');
+            
+            // Add click effects to all buttons
+            const buttons = document.querySelectorAll('button');
+            buttons.forEach(button => {
+                button.addEventListener('click', function() {
+                    this.style.transform = 'scale(0.95)';
+                    setTimeout(() => {
+                        this.style.transform = 'scale(1)';
+                    }, 150);
+                });
+            });
+        });
+    </script>
+</body>
+</html>

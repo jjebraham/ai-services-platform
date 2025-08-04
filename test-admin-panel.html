@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel Test</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 p-8">
+    <div class="max-w-2xl mx-auto">
+        <h1 class="text-3xl font-bold text-gray-900 mb-6">Admin Panel Test</h1>
+        
+        <div class="bg-white rounded-lg shadow p-6 mb-6">
+            <h2 class="text-xl font-semibold mb-4">Test Admin Key</h2>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Admin Key</label>
+                    <input type="password" id="testAdminKey" value="admin123" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <button onclick="testAdminAccess()" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">Test Admin Access</button>
+            </div>
+            <div id="testResult" class="mt-4"></div>
+        </div>
+
+        <div class="bg-white rounded-lg shadow p-6">
+            <h2 class="text-xl font-semibold mb-4">Quick Links</h2>
+            <div class="space-y-2">
+                <a href="complete-supabase-app.html" class="block text-blue-600 hover:text-blue-800">→ Full Admin Panel</a>
+                <a href="index.html" class="block text-blue-600 hover:text-blue-800">→ Main Application</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = window.location.origin;
+
+        async function testAdminAccess() {
+            const adminKey = document.getElementById('testAdminKey').value;
+            const resultDiv = document.getElementById('testResult');
+            
+            resultDiv.innerHTML = '<p class="text-gray-600">Testing...</p>';
+
+            try {
+                // Test admin status endpoint
+                const response = await fetch(`${API_BASE}/api/admin/supabase/status`, {
+                    headers: {
+                        'X-Admin-Key': adminKey
+                    }
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    resultDiv.innerHTML = `
+                        <div class="p-4 bg-green-50 border border-green-200 rounded-lg">
+                            <h3 class="text-green-800 font-semibold">✅ Admin Access Successful!</h3>
+                            <p class="text-green-700 text-sm mt-1">Admin key is valid. You can access the admin panel.</p>
+                            <pre class="text-xs text-green-600 mt-2 overflow-auto">${JSON.stringify(result, null, 2)}</pre>
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="p-4 bg-red-50 border border-red-200 rounded-lg">
+                            <h3 class="text-red-800 font-semibold">❌ Admin Access Failed</h3>
+                            <p class="text-red-700 text-sm mt-1">${result.error || 'Unknown error'}</p>
+                            ${result.hint ? `<p class="text-red-600 text-sm mt-1">💡 ${result.hint}</p>` : ''}
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="p-4 bg-red-50 border border-red-200 rounded-lg">
+                        <h3 class="text-red-800 font-semibold">❌ Connection Error</h3>
+                        <p class="text-red-700 text-sm mt-1">Could not connect to server. Make sure it's running.</p>
+                        <p class="text-red-600 text-sm mt-1">Error: ${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+
+        // Test on page load
+        window.addEventListener('load', () => {
+            setTimeout(testAdminAccess, 1000);
+        });
+    </script>
+</body>
+</html>
+
