@@ -162,9 +162,9 @@ function HomePage() {
           </div>
 
           <div className="section-cta">
-            <a href="/services" className="btn btn-secondary">
+            <Link to="/services" className="btn btn-secondary">
               View All Services →
-            </a>
+            </Link>
           </div>
         </div>
       </section>
@@ -181,17 +181,17 @@ function HomePage() {
             
             <div className="cta-buttons">
               {isAuthenticated ? (
-                <a href="/dashboard" className="btn btn-light">
+                <Link to="/dashboard" className="btn btn-light">
                   Go to Dashboard →
-                </a>
+                </Link>
               ) : (
                 <>
-                  <a href="/register" className="btn btn-light">
+                  <Link to="/register" className="btn btn-light">
                     Create Free Account →
-                  </a>
-                  <a href="/login" className="btn btn-outline">
+                  </Link>
+                  <Link to="/login" className="btn btn-outline">
                     Sign In
-                  </a>
+                  </Link>
                 </>
               )}
             </div>

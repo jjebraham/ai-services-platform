@@ -11,35 +11,28 @@ const rateLimit = require('express-rate-limit');
 const path = require('path');
 
 // Import database connection
-const connectDB = require('./config/database');
+const connectDB = require('./database');
 
 // Import models to ensure they're registered
-require('./models/User');
-require('./models/AIService');
-require('./models/Order');
-require('./models/SupportTicket');
-require('./models/Notification');
-require('./models/Settings');
-require('./models/CMSPage');
+require('./User');
+require('./AIService');
+require('./Order');
+require('./SupportTicket');
+require('./Notification');
+require('./Settings');
+require('./CMSPage');
 
 // Import middleware
-const { errorHandler } = require('./middleware/errorHandler');
-const { notFound } = require('./middleware/notFound');
+const { errorHandler } = require('./errorHandler');
+const { notFound } = require('./notFound');
 
 // Import routes
-const authRoutes = require('./routes/auth');
-const userRoutes = require('./routes/users');
-const serviceRoutes = require('./routes/services');
+const authRoutes = require('./routes/auth-routes');
 const orderRoutes = require('./routes/orders');
-const ticketRoutes = require('./routes/tickets');
-const notificationRoutes = require('./routes/notifications');
-const adminRoutes = require('./routes/admin');
-const cmsRoutes = require('./routes/cms');
-const uploadRoutes = require('./routes/upload');
-const kycRoutes = require('./routes/kyc');
+const adminRoutes = require('./routes/admin-routes');
 
 // Import utilities
-const { initializeApp } = require('./utils/initialize');
+const { initializeApp } = require('./initialize');
 
 const app = express();
 
@@ -150,15 +143,8 @@ app.get('/health', (req, res) => {
 
 // API routes
 app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes);
-app.use('/api/services', serviceRoutes);
 app.use('/api/orders', orderRoutes);
-app.use('/api/tickets', ticketRoutes);
-app.use('/api/notifications', notificationRoutes);
 app.use('/api/admin', adminRoutes);
-app.use('/api/cms', cmsRoutes);
-app.use('/api/upload', uploadRoutes);
-app.use('/api/kyc', kycRoutes);
 
 // Serve frontend in production
 if (process.env.NODE_ENV === 'production') {

@@ -1,12 +1,28 @@
 const express = require('express');
 const { body, query, validationResult } = require('express-validator');
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
-const Order = require('../models/Order');
-const AIService = require('../models/AIService');
-const User = require('../models/User');
-const { protect, requireKYC } = require('../middleware/auth');
-const { getExchangeRate } = require('../utils/exchangeRate');
-const { sendOrderConfirmationEmail } = require('../utils/email');
+
+// Initialize Stripe only if the secret key is properly configured
+let stripe = null;
+try {
+  if (process.env.STRIPE_SECRET_KEY && 
+      process.env.STRIPE_SECRET_KEY.startsWith('sk_') && 
+      process.env.STRIPE_SECRET_KEY !== 'sk_test_your_stripe_secret_key_here') {
+    stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+    console.log('Stripe initialized successfully');
+  } else {
+    console.log('Stripe not initialized - invalid or missing API key');
+  }
+} catch (error) {
+  console.error('Failed to initialize Stripe:', error.message);
+  stripe = null;
+}
+
+const Order = require('../Order');
+const AIService = require('../AIService');
+const User = require('../User');
+const { protect, requireKYC } = require('../auth');
+const { getExchangeRate } = require('../exchangeRate');
+const { sendOrderConfirmationEmail } = require('../email');
 
 const router = express.Router();
 
@@ -93,6 +109,13 @@ router.post('/', protect, requireKYC, [
     let paymentIntent;
     
     if (paymentProvider === 'stripe') {
+      if (!stripe) {
+        return res.status(500).json({
+          success: false,
+          error: 'Stripe payment is not configured. Please contact support.'
+        });
+      }
+      
       paymentIntent = await stripe.paymentIntents.create({
         amount: Math.round(totalUSD * 100), // Stripe expects cents
         currency: 'usd',
@@ -239,7 +262,7 @@ router.put('/:id/cancel', protect, async (req, res, next) => {
     }
 
     // Cancel payment intent if exists
-    if (order.payment.paymentIntentId && order.payment.provider === 'stripe') {
+    if (order.payment.paymentIntentId && order.payment.provider === 'stripe' && stripe) {
       try {
         await stripe.paymentIntents.cancel(order.payment.paymentIntentId);
       } catch (stripeError) {

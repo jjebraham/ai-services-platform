@@ -31,17 +31,32 @@ export const AuthProvider = ({ children }) => {
         setUser(userData);
         setIsAdmin(userData.role === 'admin');
       } else {
-        // For development: automatically create a test admin user
-        const testUser = {
-          id: 1,
-          email: 'admin@test.com',
-          name: 'Test Admin',
-          role: 'admin'
-        };
-        localStorage.setItem('user', JSON.stringify(testUser));
-        setIsAuthenticated(true);
-        setUser(testUser);
-        setIsAdmin(true);
+        // Try to check with backend API for existing session
+        try {
+          const response = await fetch('/api/auth/status', {
+            credentials: 'include'
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            if (data.isAuthenticated && data.user) {
+              const userData = {
+                id: data.user.id,
+                email: data.user.email,
+                name: data.user.name || data.user.email.split('@')[0],
+                role: data.user.role || 'user',
+                balance: data.user.balance || 0
+              };
+              
+              localStorage.setItem('user', JSON.stringify(userData));
+              setIsAuthenticated(true);
+              setUser(userData);
+              setIsAdmin(userData.role === 'admin');
+            }
+          }
+        } catch (error) {
+          console.log('Backend auth check failed, user not logged in');
+        }
       }
     } catch (error) {
       console.error('Auth check failed:', error);
@@ -50,24 +65,16 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  const login = async (email, password) => {
+  const login = async (userData) => {
     try {
-      // Mock authentication - in production, this would be an API call
-      if (email && password) {
-        const mockUser = {
-          id: 1,
-          email: email,
-          name: email.split('@')[0],
-          role: 'admin' // For demo purposes, make everyone admin
-        };
-        
-        localStorage.setItem('user', JSON.stringify(mockUser));
+      if (userData) {
+        localStorage.setItem('user', JSON.stringify(userData));
         setIsAuthenticated(true);
-        setUser(mockUser);
-        setIsAdmin(true);
+        setUser(userData);
+        setIsAdmin(userData.role === 'admin');
         return { success: true };
       } else {
-        return { success: false, error: 'Email and password required' };
+        return { success: false, error: 'User data required' };
       }
     } catch (error) {
       return { success: false, error: 'Login failed' };

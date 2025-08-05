@@ -57,21 +57,85 @@ function LoginPage() {
     setIsLoading(true);
     
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Mock successful login
-      const mockUser = {
-        id: '1',
-        email: formData.email,
-        name: 'John Doe',
-        balance: 1250.75
-      };
-      
-      login(mockUser);
-      navigate('/dashboard');
+      // Try to authenticate with backend API
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+        }),
+        credentials: 'include', // Include cookies
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.success) {
+        // Backend authentication successful
+        const userData = {
+          id: data.user.id,
+          email: data.user.email,
+          name: data.user.name || data.user.email.split('@')[0],
+          role: data.user.role || 'user',
+          balance: data.user.balance || 0
+        };
+        
+        login(userData);
+        navigate('/dashboard');
+      } else {
+        // Backend authentication failed, check if it's a demo user
+        const demoUsers = {
+          'demo@aiservices.com': { password: 'demo123456', name: 'Demo User', role: 'user' },
+          'demoadmin@aiservices.com': { password: 'demoadmin123456', name: 'Demo Admin', role: 'admin' },
+          'admin@aiservices.com': { password: 'admin123456', name: 'System Administrator', role: 'admin' }
+        };
+
+        const demoUser = demoUsers[formData.email];
+        if (demoUser && demoUser.password === formData.password) {
+          // Demo user authentication
+          const userData = {
+            id: 'demo_' + Date.now(),
+            email: formData.email,
+            name: demoUser.name,
+            role: demoUser.role,
+            balance: 1250.75,
+            isDemo: true
+          };
+          
+          login(userData);
+          navigate('/dashboard');
+        } else {
+          setErrors({ submit: data.message || 'Invalid email or password' });
+        }
+      }
     } catch (error) {
-      setErrors({ submit: 'Login failed. Please try again.' });
+      console.error('Login error:', error);
+      
+      // Fallback to demo user authentication if backend is not available
+      const demoUsers = {
+        'demo@aiservices.com': { password: 'demo123456', name: 'Demo User', role: 'user' },
+        'demoadmin@aiservices.com': { password: 'demoadmin123456', name: 'Demo Admin', role: 'admin' },
+        'admin@aiservices.com': { password: 'admin123456', name: 'System Administrator', role: 'admin' }
+      };
+
+      const demoUser = demoUsers[formData.email];
+      if (demoUser && demoUser.password === formData.password) {
+        const userData = {
+          id: 'demo_' + Date.now(),
+          email: formData.email,
+          name: demoUser.name,
+          role: demoUser.role,
+          balance: 1250.75,
+          isDemo: true
+        };
+        
+        login(userData);
+        navigate('/dashboard');
+      } else {
+        setErrors({ submit: 'Login failed. Please check your credentials.' });
+      }
     } finally {
       setIsLoading(false);
     }
@@ -91,6 +155,16 @@ function LoginPage() {
             <p className="login-subtitle">
               Sign in to your account to access premium AI services
             </p>
+            
+            {/* Demo Credentials */}
+            <div className="demo-credentials">
+              <h4 style={{ margin: '10px 0 5px 0', color: '#666', fontSize: '14px' }}>Demo Credentials:</h4>
+              <div style={{ fontSize: '12px', color: '#888', lineHeight: '1.4' }}>
+                <div><strong>User:</strong> demo@aiservices.com / demo123456</div>
+                <div><strong>Admin:</strong> demoadmin@aiservices.com / demoadmin123456</div>
+                <div><strong>Super Admin:</strong> admin@aiservices.com / admin123456</div>
+              </div>
+            </div>
           </div>
 
           <form onSubmit={handleSubmit} className="login-form">

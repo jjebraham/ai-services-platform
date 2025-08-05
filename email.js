@@ -1,5 +1,5 @@
 const nodemailer = require('nodemailer');
-const Settings = require('../models/Settings');
+const Settings = require('./Settings');
 
 // Create transporter
 const createTransporter = async () => {

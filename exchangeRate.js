@@ -1,5 +1,5 @@
 const axios = require('axios');
-const Settings = require('../models/Settings');
+const Settings = require('./Settings');
 
 // Cache for exchange rate
 let exchangeRateCache = {
