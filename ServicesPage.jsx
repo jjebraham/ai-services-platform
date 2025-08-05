@@ -1,143 +1,78 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
+import { useLanguage } from './LanguageContext';
+import { llmServices } from './llmData';
 
 function ServicesPage() {
   const { user } = useAuth();
+  const { t, lang } = useLanguage();
   const [services, setServices] = useState([]);
   const [filteredServices, setFilteredServices] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
   const [sortBy, setSortBy] = useState('name');
   const [exchangeRate, setExchangeRate] = useState(null);
 
-  const categories = [
-    { value: 'all', label: 'All Services', icon: '✨' },
-    { value: 'language-models', label: 'Language Models', icon: '💬' },
-    { value: 'image-generation', label: 'Image Generation', icon: '🖼️' },
-    { value: 'code-execution', label: 'Code Execution', icon: '💻' },
-    { value: 'data-analysis', label: 'Data Analysis', icon: '📊' },
-    { value: 'ai-tools', label: 'AI Tools', icon: '🧠' },
-  ];
-
   const sortOptions = [
-    { value: 'name', label: 'Name (A-Z)' },
-    { value: 'price', label: 'Price (Low to High)' },
-    { value: 'rating', label: 'Rating (High to Low)' },
-    { value: 'popularity', label: 'Most Popular' },
-  ];
-
-  // Mock services data for demonstration
-  const mockServices = [
-    {
-      _id: '1',
-      name: 'OpenAI GPT-4',
-      description: 'Advanced language model for text generation, analysis, and conversation. Perfect for content creation, coding assistance, and complex reasoning tasks.',
-      category: 'language-models',
-      priceUSD: 0.03,
-      unit: 'per 1K tokens',
-      isActive: true,
-      rating: 4.9,
-      popularity: 95,
-      features: ['Text Generation', 'Code Assistance', 'Analysis', 'Conversation'],
-      provider: 'OpenAI',
-      responseTime: '< 2s',
-      image: '🤖'
-    },
-    {
-      _id: '2',
-      name: 'DeepSeek Coder',
-      description: 'Specialized coding assistant with advanced programming capabilities. Supports multiple languages and frameworks.',
-      category: 'code-execution',
-      priceUSD: 0.02,
-      unit: 'per 1K tokens',
-      isActive: true,
-      rating: 4.7,
-      popularity: 88,
-      features: ['Code Generation', 'Debugging', 'Refactoring', 'Documentation'],
-      provider: 'DeepSeek',
-      responseTime: '< 3s',
-      image: '👨‍💻'
-    },
-    {
-      _id: '3',
-      name: 'DALL-E 3',
-      description: 'State-of-the-art image generation model for creating high-quality images from text descriptions.',
-      category: 'image-generation',
-      priceUSD: 0.08,
-      unit: 'per image',
-      isActive: true,
-      rating: 4.8,
-      popularity: 92,
-      features: ['High Resolution', 'Style Control', 'Text Integration', 'Commercial Use'],
-      provider: 'OpenAI',
-      responseTime: '< 10s',
-      image: '🎨'
-    },
-    {
-      _id: '4',
-      name: 'Claude 3 Sonnet',
-      description: 'Anthropic\'s advanced AI assistant for analysis, writing, and complex reasoning tasks.',
-      category: 'language-models',
-      priceUSD: 0.015,
-      unit: 'per 1K tokens',
-      isActive: true,
-      rating: 4.6,
-      popularity: 85,
-      features: ['Long Context', 'Analysis', 'Writing', 'Safety'],
-      provider: 'Anthropic',
-      responseTime: '< 2s',
-      image: '🧠'
-    },
-    {
-      _id: '5',
-      name: 'Stable Diffusion XL',
-      description: 'Open-source image generation model with excellent quality and customization options.',
-      category: 'image-generation',
-      priceUSD: 0.04,
-      unit: 'per image',
-      isActive: true,
-      rating: 4.5,
-      popularity: 78,
-      features: ['Open Source', 'Customizable', 'Fast Generation', 'Multiple Styles'],
-      provider: 'Stability AI',
-      responseTime: '< 5s',
-      image: '🖼️'
-    },
-    {
-      _id: '6',
-      name: 'Code Interpreter',
-      description: 'Secure code execution environment supporting Python, JavaScript, and more programming languages.',
-      category: 'code-execution',
-      priceUSD: 0.01,
-      unit: 'per execution',
-      isActive: true,
-      rating: 4.4,
-      popularity: 72,
-      features: ['Multi-Language', 'Secure Sandbox', 'File Support', 'Visualization'],
-      provider: 'Platform',
-      responseTime: '< 5s',
-      image: '⚡'
-    },
+    { value: 'name', label: t('sortByName') },
+    { value: 'price', label: t('sortByPrice') },
+    { value: 'rating', label: t('sortByRating') },
+    { value: 'popularity', label: t('sortByPopularity') },
   ];
 
   useEffect(() => {
     loadServices();
     fetchExchangeRate();
-  }, []);
+  }, [lang]); // Add lang dependency
 
   useEffect(() => {
     filterAndSortServices();
-  }, [services, searchQuery, selectedCategory, sortBy]);
+  }, [services, searchQuery, sortBy, lang]);
 
   const loadServices = async () => {
     try {
-      // For now, use mock data since backend connection has issues
-      setServices(mockServices);
+      // Transform LLM services data to match component structure
+      const transformedServices = llmServices.map(service => ({
+        _id: service.id,
+        name: service.name[lang] || service.name.en,
+        description: service.details[lang] || service.details.en,
+        intro: service.intro[lang] || service.intro.en,
+        priceUSD: service.priceUSD,
+        unit: service.unit[lang] || service.unit.en || service.unit,
+        isActive: true,
+        rating: service.rating,
+        popularity: service.popularity,
+        features: service.features[lang] || service.features.en || service.features || [],
+        pros: service.pros[lang] || service.pros.en || service.pros || [],
+        bestFor: service.bestFor[lang] || service.bestFor.en || service.bestFor || '',
+        provider: service.provider[lang] || service.provider.en || service.provider,
+        responseTime: service.responseTime[lang] || service.responseTime.en || service.responseTime,
+        image: service.icon
+      }));
+      
+      // Use LLM services data
+      setServices(transformedServices);
     } catch (error) {
       console.error('Failed to load services:', error);
-      // Use mock data as fallback
-      setServices(mockServices);
+      // Use LLM services as fallback
+      const transformedServices = llmServices.map(service => ({
+        _id: service.id,
+        name: service.name[lang] || service.name.en,
+        description: service.details[lang] || service.details.en,
+        intro: service.intro[lang] || service.intro.en,
+        priceUSD: service.priceUSD,
+        unit: service.unit[lang] || service.unit.en || service.unit,
+        isActive: true,
+        rating: service.rating,
+        popularity: service.popularity,
+        features: service.features[lang] || service.features.en || service.features || [],
+        pros: service.pros[lang] || service.pros.en || service.pros || [],
+        bestFor: service.bestFor[lang] || service.bestFor.en || service.bestFor || '',
+        provider: service.provider[lang] || service.provider.en || service.provider,
+        responseTime: service.responseTime[lang] || service.responseTime.en || service.responseTime,
+        image: service.icon
+      }));
+      setServices(transformedServices);
     } finally {
       setIsLoading(false);
     }
@@ -157,8 +92,7 @@ function ServicesPage() {
     let filtered = services.filter(service => {
       const matchesSearch = service.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                            service.description.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesCategory = selectedCategory === 'all' || service.category === selectedCategory;
-      return matchesSearch && matchesCategory && service.isActive;
+      return matchesSearch && service.isActive;
     });
 
     // Sort services
@@ -184,44 +118,40 @@ function ServicesPage() {
     return `${priceIRR.toLocaleString()} ﷼ ${unit}`;
   };
 
-  const getCategoryIcon = (category) => {
-    const categoryData = categories.find(cat => cat.value === category);
-    return categoryData ? categoryData.icon : '🔧';
-  };
+
 
   const handleOrderService = (service) => {
     if (!user) {
-      alert('Please log in to order services');
+      alert(t('loginToOrder'));
       return;
     }
-    alert(`Ordering ${service.name}. This feature will be implemented with payment integration.`);
+    alert(t('orderingService').replace('{service}', service.name));
   };
 
   if (isLoading) {
     return (
-      <div className="services-page">
+      <div className={`services-page ${lang === 'fa' ? 'rtl' : ''}`}>
         <div className="loading-container">
           <div className="loading-spinner">⏳</div>
-          <p>Loading services...</p>
+          <p>{t('loadingServices')}</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="services-page">
+    <div className={`services-page ${lang === 'fa' ? 'rtl' : ''}`}>
       <div className="services-container">
         {/* Header */}
         <div className="services-header">
-          <h1>AI Services Catalog</h1>
+          <h1>{t('llmModelsTitle')}</h1>
           <p>
-            Discover and access premium AI services from leading providers. 
-            All prices shown in Iranian Toman with real-time conversion.
+            {t('llmModelsDescription')}
           </p>
           {exchangeRate && (
             <div className="exchange-rate">
               <span>💱</span>
-              <span>1 USD = {exchangeRate.toLocaleString()} ﷼</span>
+              <span>{t('exchangeRate').replace('{rate}', exchangeRate.toLocaleString())}</span>
             </div>
           )}
         </div>
@@ -234,25 +164,12 @@ function ServicesPage() {
               <span className="search-icon">🔍</span>
               <input
                 type="text"
-                placeholder="Search services..."
+                placeholder={t('searchPlaceholder')}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="search-input"
               />
             </div>
-
-            {/* Category Filter */}
-            <select 
-              value={selectedCategory} 
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              className="filter-select"
-            >
-              {categories.map((category) => (
-                <option key={category.value} value={category.value}>
-                  {category.icon} {category.label}
-                </option>
-              ))}
-            </select>
 
             {/* Sort */}
             <select 
@@ -270,7 +187,7 @@ function ServicesPage() {
 
           {/* Results count */}
           <div className="results-count">
-            <p>Showing {filteredServices.length} of {services.length} services</p>
+            <p>{t('showingResults').replace('{count}', filteredServices.length).replace('{total}', services.length)}</p>
           </div>
         </div>
 
@@ -281,7 +198,7 @@ function ServicesPage() {
               <div className="service-header">
                 <div className="service-info">
                   <div className="service-icon">
-                    <span className="category-icon">{getCategoryIcon(service.category)}</span>
+                    <span className="category-icon">{service.image}</span>
                   </div>
                   <div className="service-details">
                     <h3 className="service-name">{service.name}</h3>
@@ -289,18 +206,47 @@ function ServicesPage() {
                   </div>
                 </div>
                 <div className="service-category">
-                  {categories.find(cat => cat.value === service.category)?.label}
+                  {t('languageModel')}
                 </div>
               </div>
 
               <div className="service-description">
-                {service.description}
+                {service.intro}
               </div>
 
               <div className="service-content">
+                {/* Pros */}
+                {service.pros && service.pros.length > 0 && (
+                  <div className="service-pros">
+                    <h4>{t('pros') || 'Pros'}</h4>
+                    <div className="pros-list">
+                      {service.pros.slice(0, 3).map((pro, index) => (
+                        <div key={index} className="pro-item">
+                          <span className="pro-icon">✅</span>
+                          <span className="pro-text">{pro}</span>
+                        </div>
+                      ))}
+                      {service.pros.length > 3 && (
+                        <div className="pro-item more">
+                          <span className="pro-icon">➕</span>
+                          <span className="pro-text">{t('morePros') || `+${service.pros.length - 3} more`}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Best For */}
+                {service.bestFor && (
+                  <div className="service-best-for">
+                    <h4>{t('bestFor') || 'Best For'}</h4>
+                    <p className="best-for-text">{service.bestFor}</p>
+                  </div>
+                )}
+
                 {/* Features */}
                 <div className="service-features">
-                  <h4>Key Features</h4>
+                  <h4>{t('keyFeatures')}</h4>
                   <div className="features-list">
                     {service.features.slice(0, 3).map((feature, index) => (
                       <span key={index} className="feature-tag">
@@ -309,7 +255,7 @@ function ServicesPage() {
                     ))}
                     {service.features.length > 3 && (
                       <span className="feature-tag more">
-                        +{service.features.length - 3} more
+                        {t('moreFeatures').replace('{count}', service.features.length - 3)}
                       </span>
                     )}
                   </div>
@@ -322,21 +268,21 @@ function ServicesPage() {
                       <span>⭐</span>
                       <span>{service.rating}</span>
                     </div>
-                    <p className="stat-label">Rating</p>
+                    <p className="stat-label">{t('rating')}</p>
                   </div>
                   <div className="stat">
                     <div className="stat-value">
                       <span>⏱️</span>
                       <span>{service.responseTime}</span>
                     </div>
-                    <p className="stat-label">Response</p>
+                    <p className="stat-label">{t('response')}</p>
                   </div>
                   <div className="stat">
                     <div className="stat-value">
                       <span>🔥</span>
                       <span>{service.popularity}%</span>
                     </div>
-                    <p className="stat-label">Popular</p>
+                    <p className="stat-label">{t('popular')}</p>
                   </div>
                 </div>
 
@@ -357,8 +303,8 @@ function ServicesPage() {
                     onClick={() => handleOrderService(service)}
                     className="order-button"
                   >
-                    Order Now
-                    <span>→</span>
+                    {t('orderNow')}
+                    <span>{lang === 'fa' ? '←' : '→'}</span>
                   </button>
                 </div>
               </div>
@@ -370,18 +316,17 @@ function ServicesPage() {
         {filteredServices.length === 0 && (
           <div className="empty-state">
             <div className="empty-icon">🔍</div>
-            <h3>No services found</h3>
+            <h3>{t('noModelsFound')}</h3>
             <p>
-              Try adjusting your search criteria or browse all categories.
+              {t('noModelsDescription')}
             </p>
             <button 
               className="clear-filters-button"
               onClick={() => {
                 setSearchQuery('');
-                setSelectedCategory('all');
               }}
             >
-              Clear Filters
+              {t('clearSearch')}
             </button>
           </div>
         )}
@@ -391,23 +336,23 @@ function ServicesPage() {
           <div className="info-grid">
             <div className="info-card">
               <div className="info-icon">🔒</div>
-              <h3>Secure & Reliable</h3>
-              <p>All services are hosted on secure infrastructure with 99.9% uptime guarantee.</p>
+              <h3>{t('secureReliableTitle')}</h3>
+              <p>{t('secureReliableDesc')}</p>
             </div>
             <div className="info-card">
               <div className="info-icon">💰</div>
-              <h3>Transparent Pricing</h3>
-              <p>No hidden fees. Pay only for what you use with real-time currency conversion.</p>
+              <h3>{t('transparentPricingTitle')}</h3>
+              <p>{t('transparentPricingDesc')}</p>
             </div>
             <div className="info-card">
               <div className="info-icon">⚡</div>
-              <h3>Fast Performance</h3>
-              <p>Optimized APIs with low latency and high throughput for the best user experience.</p>
+              <h3>{t('fastPerformanceTitle')}</h3>
+              <p>{t('fastPerformanceDesc')}</p>
             </div>
             <div className="info-card">
               <div className="info-icon">🎯</div>
-              <h3>Quality Assured</h3>
-              <p>All services are tested and verified to meet the highest quality standards.</p>
+              <h3>{t('qualityAssuredTitle')}</h3>
+              <p>{t('qualityAssuredDesc')}</p>
             </div>
           </div>
         </div>
