@@ -1,9 +1,12 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from './AuthContext';
+import { useLanguage } from './LanguageContext';
+import { llmServices } from './llmData';
 
 function HomePage() {
   const { user, isAuthenticated } = useAuth();
+  const { t } = useLanguage();
 
   const features = [
     {
@@ -166,6 +169,23 @@ function HomePage() {
               View All Services →
             </Link>
           </div>
+        </div>
+      </section>
+
+      {/* LLM Menu Section */}
+      <section className="llm-section">
+        <div className="section-container">
+          <div className="section-header">
+            <h2 className="section-title">{t('llmServices')}</h2>
+          </div>
+          <ul className="llm-list">
+            {llmServices.map(service => (
+              <li key={service.id} className="llm-item">
+                <Link to={`/llms/${service.id}`}>{service.name}</Link>
+                <p>{service.intro}</p>
+              </li>
+            ))}
+          </ul>
         </div>
       </section>
 

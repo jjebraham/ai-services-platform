@@ -8,6 +8,10 @@ import RegisterPage from './RegisterPage';
 import DashboardPage from './DashboardPage';
 import ServicesPage from './ServicesPage';
 import ServiceDetailPage from './ServiceDetailPage';
+import LLMDetailPage from './LLMDetailPage';
+import PaymentsPage from './PaymentsPage';
+import { LanguageProvider } from './LanguageContext';
+import { ThemeProvider } from './ThemeContext';
 import AdminRoute from './AdminRoute';
 import AdminDashboard from './AdminDashboard';
 import AdminServices from './AdminServices';
@@ -31,14 +35,18 @@ function PublicRoute({ children }) {
 function App() {
   return (
     <AuthProvider>
-      <Router>
-        <div className="App">
-          <Navigation />
-          <Routes>
-            {/* Public Routes */}
-            <Route path="/" element={<HomePage />} />
-            <Route path="/services" element={<ServicesPage />} />
-            <Route path="/services/:id" element={<ServiceDetailPage />} />
+      <LanguageProvider>
+        <ThemeProvider>
+          <Router>
+            <div className="App">
+              <Navigation />
+              <Routes>
+                {/* Public Routes */}
+                <Route path="/" element={<HomePage />} />
+                <Route path="/services" element={<ServicesPage />} />
+                <Route path="/services/:id" element={<ServiceDetailPage />} />
+                <Route path="/llms/:id" element={<LLMDetailPage />} />
+                <Route path="/payments" element={<PaymentsPage />} />
             
             {/* Public Routes (when not authenticated) */}
             <Route 
@@ -103,9 +111,11 @@ function App() {
                 </AdminRoute>
               } 
             />
-          </Routes>
-        </div>
-      </Router>
+              </Routes>
+            </div>
+          </Router>
+        </ThemeProvider>
+      </LanguageProvider>
     </AuthProvider>
   );
 }

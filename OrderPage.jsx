@@ -3,11 +3,10 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { 
-  ShoppingCart, 
-  CreditCard, 
-  Shield, 
-  CheckCircle, 
+import {
+  ShoppingCart,
+  Shield,
+  CheckCircle,
   AlertCircle,
   Minus,
   Plus,
@@ -24,7 +23,9 @@ import LoadingSpinner from '../components/LoadingSpinner';
 
 const orderSchema = z.object({
   quantity: z.number().min(1, 'Quantity must be at least 1').max(1000, 'Maximum quantity is 1000'),
-  paymentMethod: z.enum(['stripe', 'paypal'], {
+  serviceType: z.string(),
+  duration: z.string(),
+  paymentMethod: z.enum(['manual', 'crypto'], {
     required_error: 'Please select a payment method',
   }),
 });
@@ -49,7 +50,9 @@ const OrderPage = () => {
     resolver: zodResolver(orderSchema),
     defaultValues: {
       quantity: 1,
-      paymentMethod: 'stripe'
+      serviceType: 'standard',
+      duration: 'monthly',
+      paymentMethod: 'manual'
     }
   });
 
@@ -117,6 +120,8 @@ const OrderPage = () => {
       const orderData = {
         serviceId: service._id,
         quantity: data.quantity,
+        serviceType: data.serviceType,
+        duration: data.duration,
         paymentMethod: data.paymentMethod,
         totalAmount: calculateTotal().toman
       };
@@ -300,6 +305,34 @@ const OrderPage = () => {
                   )}
                 </div>
 
+                {/* Service Type */}
+                <div className="mt-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Service Type
+                  </label>
+                  <select
+                    {...register('serviceType')}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="standard">Standard</option>
+                    <option value="premium">Premium</option>
+                  </select>
+                </div>
+
+                {/* Duration */}
+                <div className="mt-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Duration
+                  </label>
+                  <select
+                    {...register('duration')}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="monthly">Monthly</option>
+                    <option value="yearly">Yearly</option>
+                  </select>
+                </div>
+
                 {/* Payment Method */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-3">
@@ -310,21 +343,11 @@ const OrderPage = () => {
                       <input
                         {...register('paymentMethod')}
                         type="radio"
-                        value="stripe"
+                        value="manual"
                         className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
                       />
                       <div className="ml-3 flex-1">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center">
-                            <CreditCard className="h-5 w-5 text-gray-400 mr-2" />
-                            <span className="text-sm font-medium text-gray-900">Credit/Debit Card</span>
-                          </div>
-                          <div className="flex items-center space-x-2">
-                            <img src="/api/placeholder/24/16" alt="Visa" className="h-4" />
-                            <img src="/api/placeholder/24/16" alt="Mastercard" className="h-4" />
-                          </div>
-                        </div>
-                        <p className="text-xs text-gray-500 mt-1">Secure payment via Stripe</p>
+                        <span className="text-sm font-medium text-gray-900">Manual Payment</span>
                       </div>
                     </label>
 
@@ -332,18 +355,11 @@ const OrderPage = () => {
                       <input
                         {...register('paymentMethod')}
                         type="radio"
-                        value="paypal"
+                        value="crypto"
                         className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300"
                       />
                       <div className="ml-3 flex-1">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center">
-                            <div className="h-5 w-5 bg-blue-600 rounded mr-2"></div>
-                            <span className="text-sm font-medium text-gray-900">PayPal</span>
-                          </div>
-                          <img src="/api/placeholder/60/16" alt="PayPal" className="h-4" />
-                        </div>
-                        <p className="text-xs text-gray-500 mt-1">Pay with your PayPal account</p>
+                        <span className="text-sm font-medium text-gray-900">Crypto</span>
                       </div>
                     </label>
                   </div>
