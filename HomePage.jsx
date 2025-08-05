@@ -5,64 +5,37 @@ import { useLanguage } from './LanguageContext';
 import { llmServices } from './llmData';
 
 function HomePage() {
-  const { user, isAuthenticated } = useAuth();
-  const { t } = useLanguage();
+  const { isAuthenticated } = useAuth();
+  const { t, lang } = useLanguage();
 
   const features = [
     {
       icon: '🛡️',
-      title: 'Secure & Verified',
-      description: 'KYC verification and secure payment processing ensure your safety and compliance.',
+      title: t('featureSecureTitle'),
+      description: t('featureSecureDesc'),
     },
     {
       icon: '💳',
-      title: 'Real-time Pricing',
-      description: 'Live USD to Toman conversion with transparent pricing and no hidden fees.',
+      title: t('featurePricingTitle'),
+      description: t('featurePricingDesc'),
     },
     {
       icon: '🎧',
-      title: '24/7 Support',
-      description: 'Dedicated customer support team ready to help you with any questions.',
+      title: t('featureSupportTitle'),
+      description: t('featureSupportDesc'),
     },
     {
       icon: '⚡',
-      title: 'Premium Services',
-      description: 'Access to cutting-edge AI services from leading providers worldwide.',
-    },
-  ];
-
-  const services = [
-    {
-      icon: '🧠',
-      title: 'Language Models',
-      description: 'Advanced AI language models for text generation, analysis, and conversation.',
-      badge: 'Popular',
-    },
-    {
-      icon: '🎨',
-      title: 'Image Generation',
-      description: 'Create stunning images and artwork using state-of-the-art AI models.',
-      badge: 'New',
-    },
-    {
-      icon: '💻',
-      title: 'Code Execution',
-      description: 'Run and execute code in various programming languages safely.',
-      badge: null,
-    },
-    {
-      icon: '📊',
-      title: 'Data Analysis',
-      description: 'Powerful data processing and analysis tools for insights and visualization.',
-      badge: null,
+      title: t('featurePremiumTitle'),
+      description: t('featurePremiumDesc'),
     },
   ];
 
   const stats = [
-    { label: 'Active Users', value: '10,000+' },
-    { label: 'AI Services', value: '50+' },
-    { label: 'Countries', value: '25+' },
-    { label: 'Uptime', value: '99.9%' },
+    { label: t('statsActiveUsers'), value: '10,000+' },
+    { label: t('statsAIServices'), value: '50+' },
+    { label: t('statsCountries'), value: '25+' },
+    { label: t('statsUptime'), value: '99.9%' },
   ];
 
   return (
@@ -71,29 +44,22 @@ function HomePage() {
       <section className="hero-section">
         <div className="hero-container">
           <div className="hero-content">
-            <div className="hero-badge">
-              ⚡ Trusted by 10,000+ users worldwide
-            </div>
-            <h1 className="hero-title">
-              Access Premium <span className="hero-highlight">AI Services</span> with Confidence
-            </h1>
-            <p className="hero-description">
-              Your gateway to cutting-edge AI tools and services. Secure payments, 
-              verified providers, and dedicated support for all your AI needs.
-            </p>
+            <div className="hero-badge">{t('heroBadge')}</div>
+            <h1 className="hero-title">{t('heroTitle')}</h1>
+            <p className="hero-description">{t('heroDescription')}</p>
 
             <div className="hero-buttons">
               {isAuthenticated ? (
                 <Link to="/dashboard" className="btn btn-primary">
-                  Go to Dashboard →
+                  {t('goToDashboard')}
                 </Link>
               ) : (
                 <>
                   <Link to="/register" className="btn btn-primary">
-                    Get Started Free →
+                    {t('getStarted')}
                   </Link>
                   <Link to="/services" className="btn btn-secondary">
-                    Browse Services
+                    {t('browseServices')}
                   </Link>
                 </>
               )}
@@ -116,11 +82,8 @@ function HomePage() {
       <section className="features-section">
         <div className="section-container">
           <div className="section-header">
-            <h2 className="section-title">Why Choose Our Platform?</h2>
-            <p className="section-description">
-              We provide a secure, reliable, and user-friendly platform for accessing 
-              premium AI services from around the world.
-            </p>
+            <h2 className="section-title">{t('whyChooseTitle')}</h2>
+            <p className="section-description">{t('whyChooseDescription')}</p>
           </div>
 
           <div className="features-grid">
@@ -135,43 +98,6 @@ function HomePage() {
         </div>
       </section>
 
-      {/* Services Section */}
-      <section className="services-section">
-        <div className="section-container">
-          <div className="section-header">
-            <h2 className="section-title">Explore AI Services</h2>
-            <p className="section-description">
-              Discover a wide range of AI services from leading providers, 
-              all available through our secure platform.
-            </p>
-          </div>
-
-          <div className="services-grid">
-            {services.map((service, index) => (
-              <div key={index} className="service-card">
-                <div className="service-header">
-                  <div className="service-icon">{service.icon}</div>
-                  {service.badge && (
-                    <span className={`service-badge ${service.badge.toLowerCase()}`}>
-                      {service.badge}
-                    </span>
-                  )}
-                </div>
-                <h3 className="service-title">{service.title}</h3>
-                <p className="service-description">{service.description}</p>
-                <button className="service-button">Learn More →</button>
-              </div>
-            ))}
-          </div>
-
-          <div className="section-cta">
-            <Link to="/services" className="btn btn-secondary">
-              View All Services →
-            </Link>
-          </div>
-        </div>
-      </section>
-
       {/* LLM Menu Section */}
       <section className="llm-section">
         <div className="section-container">
@@ -181,8 +107,8 @@ function HomePage() {
           <ul className="llm-list">
             {llmServices.map(service => (
               <li key={service.id} className="llm-item">
-                <Link to={`/llms/${service.id}`}>{service.name}</Link>
-                <p>{service.intro}</p>
+                <Link to={`/llms/${service.id}`}>{service.name[lang]}</Link>
+                <p>{service.intro[lang]}</p>
               </li>
             ))}
           </ul>
@@ -193,39 +119,30 @@ function HomePage() {
       <section className="cta-section">
         <div className="section-container">
           <div className="cta-content">
-            <h2 className="cta-title">Ready to Get Started?</h2>
-            <p className="cta-description">
-              Join thousands of users who trust our platform for their AI service needs. 
-              Start your journey today with our secure and reliable platform.
-            </p>
+            <h2 className="cta-title">{t('ctaTitle')}</h2>
+            <p className="cta-description">{t('ctaDescription')}</p>
             
             <div className="cta-buttons">
               {isAuthenticated ? (
                 <Link to="/dashboard" className="btn btn-light">
-                  Go to Dashboard →
+                  {t('ctaGoDashboard')}
                 </Link>
               ) : (
                 <>
                   <Link to="/register" className="btn btn-light">
-                    Create Free Account →
+                    {t('ctaCreateAccount')}
                   </Link>
                   <Link to="/login" className="btn btn-outline">
-                    Sign In
+                    {t('ctaSignIn')}
                   </Link>
                 </>
               )}
             </div>
 
             <div className="cta-features">
-              <div className="cta-feature">
-                ✓ No setup fees
-              </div>
-              <div className="cta-feature">
-                ✓ Secure payments
-              </div>
-              <div className="cta-feature">
-                ✓ 24/7 support
-              </div>
+              <div className="cta-feature">{t('ctaNoSetup')}</div>
+              <div className="cta-feature">{t('ctaSecurePayments')}</div>
+              <div className="cta-feature">{t('ctaSupport')}</div>
             </div>
           </div>
         </div>
