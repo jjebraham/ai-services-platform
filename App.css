@@ -11,19 +11,20 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: #f8fafc;
-  color: #1e293b;
+  background-color: #f0f0f0;
+  color: #000000;
   line-height: 1.6;
+  transition: background-color 0.3s, color 0.3s;
 }
 
 body.light-theme {
-  background-color: #ffffff;
-  color: #1e293b;
+  background-color: #f0f0f0;
+  color: #000000;
 }
 
 body.dark-theme {
-  background-color: #000000;
-  color: #facc15;
+  background-color: #333333;
+  color: #ffffff;
 }
 
 .container {
@@ -78,6 +79,19 @@ body.dark-theme {
 
 .nav-link:hover {
   color: #3b82f6;
+}
+
+body.dark-theme .navigation {
+  background: #333333;
+  box-shadow: 0 1px 3px 0 rgba(255, 255, 255, 0.1);
+}
+
+body.dark-theme .nav-link {
+  color: #ffffff;
+}
+
+body.dark-theme .nav-link:hover {
+  color: #dddddd;
 }
 
 .nav-button {
@@ -1559,8 +1573,8 @@ body.dark-theme {
 }
 
 .service-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+  transform: translateY(-4px) scale(1.02);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.15);
 }
 
 .service-card-header {

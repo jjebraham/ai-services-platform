@@ -16,8 +16,6 @@ function ServicesPage() {
   const sortOptions = [
     { value: 'name', label: t('sortByName') },
     { value: 'price', label: t('sortByPrice') },
-    { value: 'rating', label: t('sortByRating') },
-    { value: 'popularity', label: t('sortByPopularity') },
   ];
 
   useEffect(() => {
@@ -100,10 +98,6 @@ function ServicesPage() {
       switch (sortBy) {
         case 'price':
           return a.priceUSD - b.priceUSD;
-        case 'rating':
-          return b.rating - a.rating;
-        case 'popularity':
-          return b.popularity - a.popularity;
         default:
           return a.name.localeCompare(b.name);
       }
@@ -265,24 +259,10 @@ function ServicesPage() {
                 <div className="service-stats">
                   <div className="stat">
                     <div className="stat-value">
-                      <span>⭐</span>
-                      <span>{service.rating}</span>
-                    </div>
-                    <p className="stat-label">{t('rating')}</p>
-                  </div>
-                  <div className="stat">
-                    <div className="stat-value">
                       <span>⏱️</span>
                       <span>{service.responseTime}</span>
                     </div>
                     <p className="stat-label">{t('response')}</p>
-                  </div>
-                  <div className="stat">
-                    <div className="stat-value">
-                      <span>🔥</span>
-                      <span>{service.popularity}%</span>
-                    </div>
-                    <p className="stat-label">{t('popular')}</p>
                   </div>
                 </div>
 

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 
 const translations = {
   en: {
@@ -157,6 +157,12 @@ export function LanguageProvider({ children }) {
   const [lang, setLang] = useState('en');
   const t = (key) => translations[lang][key] || key;
   const toggleLanguage = () => setLang(prev => prev === 'en' ? 'fa' : 'en');
+
+  useEffect(() => {
+    document.documentElement.dir = lang === 'fa' ? 'rtl' : 'ltr';
+    document.body.classList.toggle('rtl', lang === 'fa');
+  }, [lang]);
+
   return (
     <LanguageContext.Provider value={{ lang, t, toggleLanguage }}>
       {children}
