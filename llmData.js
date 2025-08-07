@@ -95,10 +95,10 @@ export const llmServices = [
   },
   {
     id: 'gemini-advanced',
-    name: { en: 'Gemini Advanced', fa: 'جمینی پیشرفته' },
+    name: { en: 'Gemini Advanced', fa: 'جمنای پیشرفته' },
     intro: {
       en: 'Gemini Advanced combines Google\'s AI with deep integration into your Workspace (Docs, Sheets, Gmail).',
-      fa: 'جمینی پیشرفته هوش مصنوعی گوگل را با ادغام عمیق در فضای کاری شما (Docs، Sheets، Gmail) ترکیب می‌کند.'
+      fa: 'جمنای پیشرفته هوش مصنوعی گوگل را با ادغام عمیق در فضای کاری شما (Docs، Sheets، Gmail) ترکیب می‌کند.'
     },
     details: {
       en: 'It\'s designed for productivity power-users who want an AI deeply connected to their workflow.',
@@ -110,7 +110,7 @@ export const llmServices = [
     popularity: 78,
     features: {
       en: ['Gemini 1.5 Pro', 'Google Workspace integration', '2TB Google Drive', 'Smart summaries'],
-      fa: ['جمینی ۱.۵ پرو', 'ادغام Google Workspace', '۲ ترابایت Google Drive', 'خلاصه‌های هوشمند']
+      fa: ['جمنای ۱.۵ پرو', 'ادغام Google Workspace', '۲ ترابایت Google Drive', 'خلاصه‌های هوشمند']
     },
     pros: {
       en: [
@@ -120,7 +120,7 @@ export const llmServices = [
         'AI-enhanced productivity features like smart summaries and autofill'
       ],
       fa: [
-        'دسترسی به جمینی ۱.۵ پرو با پنجره زمینه بزرگ',
+        'دسترسی به جمنای ۱.۵ پرو با پنجره زمینه بزرگ',
         'ادغام یکپارچه با Google Docs، Sheets، Gmail',
         '۲ ترابایت فضای ذخیره‌سازی Google Drive شامل',
         'ویژگی‌های بهره‌وری تقویت‌شده با هوش مصنوعی مانند خلاصه‌های هوشمند و تکمیل خودکار'
