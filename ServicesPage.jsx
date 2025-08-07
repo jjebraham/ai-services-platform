@@ -12,6 +12,7 @@ function ServicesPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('name');
   const [exchangeRate, setExchangeRate] = useState(null);
+  const [basket, setBasket] = useState([]);
 
   const sortOptions = [
     { value: 'name', label: t('sortByName') },
@@ -114,13 +115,18 @@ function ServicesPage() {
 
 
 
-  const handleOrderService = (service) => {
+  const handleAddToBasket = (service) => {
     if (!user) {
       alert(t('loginToOrder'));
       return;
     }
-    alert(t('orderingService').replace('{service}', service.name));
+    setBasket(prev => [...prev, service]);
   };
+
+  const subtotal = basket.reduce((sum, item) => sum + item.priceUSD, 0);
+  const taxAmount = subtotal * 0.05;
+  const vatAmount = subtotal * 0.09;
+  const totalAmount = subtotal + taxAmount + vatAmount;
 
   if (isLoading) {
     return (
@@ -279,17 +285,41 @@ function ServicesPage() {
                     )}
                   </div>
 
-                  <button 
-                    onClick={() => handleOrderService(service)}
+                  <button
+                    onClick={() => handleAddToBasket(service)}
                     className="order-button"
                   >
-                    {t('orderNow')}
+                    {t('addToBasket')}
                     <span>{lang === 'fa' ? '←' : '→'}</span>
                   </button>
                 </div>
               </div>
             </div>
           ))}
+        </div>
+
+        {/* Basket */}
+        <div className="basket">
+          <h2>{t('basket')}</h2>
+          {basket.length === 0 ? (
+            <p>{t('emptyBasket')}</p>
+          ) : (
+            <div>
+              {basket.map((item, idx) => (
+                <div key={idx} className="basket-item">
+                  <span>{item.name}</span>
+                  <span>${item.priceUSD.toFixed(2)}</span>
+                </div>
+              ))}
+              <div className="basket-summary">
+                <div>{t('subtotal')}: ${subtotal.toFixed(2)}</div>
+                <div>{t('tax')}: ${taxAmount.toFixed(2)}</div>
+                <div>{t('vat')}: ${vatAmount.toFixed(2)}</div>
+                <div>{t('total')}: ${totalAmount.toFixed(2)}</div>
+              </div>
+              <button className="pay-button">{t('pay')}</button>
+            </div>
+          )}
         </div>
 
         {/* Empty State */}

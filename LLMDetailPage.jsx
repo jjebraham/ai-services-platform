@@ -19,7 +19,31 @@ export default function LLMDetailPage() {
   return (
     <div className="container">
       <h1>{service.name[lang]}</h1>
+      <p>{service.intro[lang]}</p>
       <p>{service.details[lang]}</p>
+
+      {service.features && (
+        <div>
+          <h3>{t('keyFeatures')}</h3>
+          <ul>
+            {service.features[lang].map((f, i) => (
+              <li key={i}>{f}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {service.pros && (
+        <div>
+          <h3>{t('pros')}</h3>
+          <ul>
+            {service.pros[lang].map((p, i) => (
+              <li key={i}>{p}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       <Link to="/">{t('home')}</Link>
     </div>
   );
