@@ -11,6 +11,8 @@ import ServiceDetailPage from './ServiceDetailPage';
 import LLMDetailPage from './LLMDetailPage';
 import PaymentsPage from './PaymentsPage';
 import BasketPage from './BasketPage';
+import Footer from './Footer';
+import { BasketProvider } from './BasketContext';
 import { LanguageProvider } from './LanguageContext';
 import { ThemeProvider } from './ThemeContext';
 import AdminRoute from './AdminRoute';
@@ -38,10 +40,11 @@ function App() {
     <AuthProvider>
       <LanguageProvider>
         <ThemeProvider>
-          <Router>
-            <div className="App">
-              <Navigation />
-              <Routes>
+          <BasketProvider>
+            <Router>
+              <div className="App">
+                <Navigation />
+                <Routes>
                 {/* Public Routes */}
                 <Route path="/" element={<HomePage />} />
                 <Route path="/services" element={<ServicesPage />} />
@@ -113,9 +116,11 @@ function App() {
                 </AdminRoute>
               } 
             />
-              </Routes>
-            </div>
-          </Router>
+                </Routes>
+                <Footer />
+              </div>
+            </Router>
+          </BasketProvider>
         </ThemeProvider>
       </LanguageProvider>
     </AuthProvider>

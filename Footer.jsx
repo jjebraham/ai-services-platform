@@ -1,9 +1,11 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Zap, Mail, Phone, MapPin } from 'lucide-react';
+import { Zap, Mail } from 'lucide-react';
+import { useLanguage } from './LanguageContext';
 
 function Footer() {
   const currentYear = new Date().getFullYear();
+  const { toggleLanguage, lang } = useLanguage();
 
   return (
     <footer className="bg-muted/50 border-t">
@@ -129,10 +131,12 @@ function Footer() {
             </div>
             <div className="flex items-center space-x-4 text-sm text-muted-foreground">
               <span>Secure payments powered by Stripe</span>
-              <div className="flex items-center space-x-2">
-                <div className="h-2 w-2 rounded-full bg-green-500"></div>
-                <span>All systems operational</span>
-              </div>
+              <button
+                onClick={toggleLanguage}
+                className="nav-button lang-button"
+              >
+                {lang === 'en' ? 'فارسی' : 'English'}
+              </button>
             </div>
           </div>
         </div>

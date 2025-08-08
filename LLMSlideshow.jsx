@@ -6,12 +6,18 @@ import { llmServices } from './llmData';
 function LLMSlideshow() {
   const { t, lang } = useLanguage();
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [slidesToShow, setSlidesToShow] = useState(2);
+  const [slidesToShow, setSlidesToShow] = useState(3);
   
   // Calculate slides to show based on window width and update on resize
   useEffect(() => {
     const handleResize = () => {
-      setSlidesToShow(window.innerWidth >= 768 ? 2 : 1);
+      if (window.innerWidth >= 1024) {
+        setSlidesToShow(3);
+      } else if (window.innerWidth >= 768) {
+        setSlidesToShow(2);
+      } else {
+        setSlidesToShow(1);
+      }
     };
     
     // Set initial value
@@ -65,7 +71,10 @@ function LLMSlideshow() {
           >
             {Array.from({ length: totalSlides }).map((_, slideIndex) => (
               <div key={slideIndex} className="slide">
-                <div className="slide-content">
+                <div
+                  className="slide-content"
+                  style={{ gridTemplateColumns: `repeat(${slidesToShow}, 1fr)` }}
+                >
                   {llmServices
                     .slice(slideIndex * slidesToShow, (slideIndex + 1) * slidesToShow)
                     .map((service) => (

@@ -114,13 +114,9 @@ body.dark-theme {
 }
 
 /* Ensure RTL support without changing layout */
-body.rtl .main-links, 
-body.rtl .user-links, 
-body.rtl .control-buttons {
-  direction: rtl;
-}
-
-/* Keep the overall structure LTR for consistent positioning */
+body.rtl .main-links,
+body.rtl .user-links,
+body.rtl .control-buttons,
 body.rtl .nav-links {
   direction: ltr;
 }
@@ -1704,6 +1700,25 @@ body.dark-theme .nav-link:hover {
   color: #333;
 }
 
+.order-button {
+  background: linear-gradient(135deg, #4f46e5, #6366f1);
+  color: #fff;
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.3s ease, transform 0.2s ease;
+}
+
+.order-button:hover {
+  background: linear-gradient(135deg, #4338ca, #4f46e5);
+  transform: translateY(-2px);
+}
+
 .service-rating {
   display: flex;
   align-items: center;
@@ -3085,7 +3100,6 @@ body.dark-theme .nav-link:hover {
 
 .slide-content {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
   gap: 2rem;
   padding: 2rem;
 }
