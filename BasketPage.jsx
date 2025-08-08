@@ -1,36 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useLanguage } from './LanguageContext';
+import { useBasket } from './BasketContext';
 
 function BasketPage() {
   const { t } = useLanguage();
-  const [basketItems, setBasketItems] = useState([
-    { id: 'chatgpt-plus', name: 'ChatGPT Plus', price: 20.00 }
-  ]);
+  const { items: basketItems, removeFromBasket, clearBasket } = useBasket();
   const [subtotal, setSubtotal] = useState(0);
   const [tax, setTax] = useState(0);
   const [vat, setVat] = useState(0);
   const [total, setTotal] = useState(0);
 
   useEffect(() => {
-    // Calculate totals
-    const itemSubtotal = basketItems.reduce((sum, item) => sum + item.price, 0);
-    const taxAmount = itemSubtotal * 0.05; // 5% tax
-    const vatAmount = itemSubtotal * 0.09; // 9% VAT
-    
+    const itemSubtotal = basketItems.reduce((sum, item) => sum + item.priceUSD, 0);
+    const taxAmount = itemSubtotal * 0.05;
+    const vatAmount = itemSubtotal * 0.09;
     setSubtotal(itemSubtotal);
     setTax(taxAmount);
     setVat(vatAmount);
     setTotal(itemSubtotal + taxAmount + vatAmount);
   }, [basketItems]);
-
-  const removeFromBasket = (itemId) => {
-    setBasketItems(basketItems.filter(item => item.id !== itemId));
-  };
-
-  const clearBasket = () => {
-    setBasketItems([]);
-  };
 
   return (
     <div className="basket-page">
@@ -48,14 +37,14 @@ function BasketPage() {
           <div className="basket-content">
             <div className="basket-items">
               {basketItems.map(item => (
-                <div key={item.id} className="basket-item">
+                <div key={item._id || item.id} className="basket-item">
                   <div className="item-details">
                     <h3>{item.name}</h3>
-                    <p className="item-price">${item.price.toFixed(2)}</p>
+                    <p className="item-price">${item.priceUSD.toFixed(2)}</p>
                   </div>
-                  <button 
-                    className="remove-item" 
-                    onClick={() => removeFromBasket(item.id)}
+                  <button
+                    className="remove-item"
+                    onClick={() => removeFromBasket(item._id || item.id)}
                     aria-label={`Remove ${item.name} from basket`}
                   >
                     ✕
