@@ -40,10 +40,6 @@ export const llmServices = [
       en: 'OpenAI',
       fa: 'اوپن‌ای‌آی'
     },
-    responseTime: {
-      en: '< 1s',
-      fa: '< ۱ ثانیه'
-    },
     icon: '🟦'
   },
   {
@@ -86,10 +82,6 @@ export const llmServices = [
     provider: {
       en: 'Anthropic',
       fa: 'انتروپیک'
-    },
-    responseTime: {
-      en: '< 2s',
-      fa: '< ۲ ثانیه'
     },
     icon: '🟩'
   },
@@ -134,10 +126,6 @@ export const llmServices = [
       en: 'Google',
       fa: 'گوگل'
     },
-    responseTime: {
-      en: '< 2s',
-      fa: '< ۲ ثانیه'
-    },
     icon: '🟥'
   },
   {
@@ -181,10 +169,6 @@ export const llmServices = [
       en: 'Perplexity AI',
       fa: 'پرپلکسیتی ای‌آی'
     },
-    responseTime: {
-      en: '< 3s',
-      fa: '< ۳ ثانیه'
-    },
     icon: '🟨'
   },
   {
@@ -227,10 +211,6 @@ export const llmServices = [
     provider: {
       en: 'xAI (Elon Musk)',
       fa: 'ایکس‌ای‌آی (ایلان ماسک)'
-    },
-    responseTime: {
-      en: '< 2s',
-      fa: '< ۲ ثانیه'
     },
     icon: '🟧'
   }

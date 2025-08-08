@@ -57,37 +57,6 @@ body.light-theme {
   color: #000000;
 }
 
-/* Light theme text visibility fixes */
-body.light-theme .service-card {
-  background: #ffffff;
-  color: #333333;
-  border: 1px solid #e0e0e0;
-}
-
-body.light-theme .service-card .service-name {
-  color: #1a1a1a;
-}
-
-body.light-theme .service-card .service-description {
-  color: #555555;
-}
-
-body.light-theme .service-card .service-provider {
-  color: #666666;
-}
-
-body.light-theme .pro-text {
-  color: #333333;
-}
-
-body.light-theme .best-for-text {
-  color: #555555;
-}
-
-body.light-theme .service-price {
-  color: #1a1a1a;
-}
-
 body.dark-theme {
   background-color: #333333;
   color: #ffffff;
@@ -145,39 +114,15 @@ body.dark-theme {
 }
 
 /* Ensure RTL support without changing layout */
-body.rtl .main-links,
-body.rtl .user-links,
-body.rtl .control-buttons,
+body.rtl .main-links, 
+body.rtl .user-links, 
+body.rtl .control-buttons {
+  direction: rtl;
+}
+
+/* Keep the overall structure LTR for consistent positioning */
 body.rtl .nav-links {
   direction: ltr;
-}
-
-/* Navigation fixes for RTL/LTR consistency */
-.nav-container {
-  direction: ltr !important;
-}
-
-.nav-links {
-  direction: ltr !important;
-}
-
-.main-links {
-  direction: ltr !important;
-}
-
-.user-links {
-  direction: ltr !important;
-}
-
-.control-buttons {
-  direction: ltr !important;
-}
-
-/* Ensure navigation items stay in place regardless of language */
-.nav-link, .nav-button {
-  white-space: nowrap;
-  text-align: center;
-  min-width: fit-content;
 }
 
 .nav-link {
@@ -1759,25 +1704,6 @@ body.dark-theme .nav-link:hover {
   color: #333;
 }
 
-.order-button {
-  background: linear-gradient(135deg, #4f46e5, #6366f1);
-  color: #fff;
-  padding: 0.5rem 1rem;
-  border: none;
-  border-radius: 8px;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.3s ease, transform 0.2s ease;
-}
-
-.order-button:hover {
-  background: linear-gradient(135deg, #4338ca, #4f46e5);
-  transform: translateY(-2px);
-}
-
 .service-rating {
   display: flex;
   align-items: center;
@@ -3159,6 +3085,7 @@ body.dark-theme .nav-link:hover {
 
 .slide-content {
   display: grid;
+  grid-template-columns: repeat(2, 1fr);
   gap: 2rem;
   padding: 2rem;
 }
@@ -3583,91 +3510,8 @@ body.dark-theme .clear-basket:hover {
   background: #555;
 }
 
-/* Footer visibility fix */
-.footer, footer {
-  display: block !important;
-  visibility: visible !important;
-  opacity: 1 !important;
-}
-
-/* Footer styles */
-footer {
-  background-color: #f8f9fa;
-  border-top: 1px solid #e9ecef;
-  margin-top: 2rem;
-}
-
-body.dark-theme footer {
-  background-color: #2d3748;
-  border-top-color: #4a5568;
-  color: #ffffff;
-}
-
-footer .container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 3rem 1rem;
-}
-
-footer .grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 2rem;
-}
-
-footer h3 {
-  font-size: 0.875rem;
-  font-weight: 600;
-  margin-bottom: 1rem;
-  color: #1a202c;
-}
-
-body.dark-theme footer h3 {
-  color: #ffffff;
-}
-
-footer ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-footer ul li {
-  margin-bottom: 0.5rem;
-}
-
-footer ul li a {
-  color: #6b7280;
-  text-decoration: none;
-  font-size: 0.875rem;
-  transition: color 0.2s;
-}
-
-footer ul li a:hover {
-  color: #3b82f6;
-}
-
-body.dark-theme footer ul li a {
-  color: #d1d5db;
-}
-
-body.dark-theme footer ul li a:hover {
-  color: #60a5fa;
-}
-
-footer .border-t {
-  border-top: 1px solid #e5e7eb;
-  margin-top: 2rem;
-  padding-top: 2rem;
-}
-
-body.dark-theme footer .border-t {
-  border-top-color: #4b5563;
-}
-
 @media (max-width: 768px) {
-  footer .grid {
+  .basket-content {
     grid-template-columns: 1fr;
-    gap: 1.5rem;
   }
 }
