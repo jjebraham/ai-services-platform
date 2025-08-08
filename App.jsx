@@ -10,6 +10,7 @@ import ServicesPage from './ServicesPage';
 import ServiceDetailPage from './ServiceDetailPage';
 import LLMDetailPage from './LLMDetailPage';
 import PaymentsPage from './PaymentsPage';
+import BasketPage from './BasketPage';
 import { LanguageProvider } from './LanguageContext';
 import { ThemeProvider } from './ThemeContext';
 import AdminRoute from './AdminRoute';
@@ -47,6 +48,7 @@ function App() {
                 <Route path="/services/:id" element={<ServiceDetailPage />} />
                 <Route path="/llms/:id" element={<LLMDetailPage />} />
                 <Route path="/payments" element={<PaymentsPage />} />
+                <Route path="/basket" element={<BasketPage />} />
             
             {/* Public Routes (when not authenticated) */}
             <Route 

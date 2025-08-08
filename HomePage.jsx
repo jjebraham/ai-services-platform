@@ -2,7 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import { useLanguage } from './LanguageContext';
-import { llmServices } from './llmData';
+import LLMSlideshow from './LLMSlideshow';
 
 function HomePage() {
   const { isAuthenticated } = useAuth();
@@ -104,14 +104,8 @@ function HomePage() {
           <div className="section-header">
             <h2 className="section-title">{t('llmServices')}</h2>
           </div>
-          <ul className="llm-list">
-            {llmServices.map(service => (
-              <li key={service.id} className="llm-item">
-                <Link to={`/llms/${service.id}`}>{service.name[lang]}</Link>
-                <p>{service.intro[lang]}</p>
-              </li>
-            ))}
-          </ul>
+          {/* Force component to remount with key to ensure proper initialization */}
+          <LLMSlideshow key={`llm-slideshow-${lang}`} />
         </div>
       </section>
 
