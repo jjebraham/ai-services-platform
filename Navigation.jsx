@@ -19,7 +19,7 @@ function Navigation() {
     <nav className="navbar">
       <div className="nav-container" dir="ltr">
         <Link to="/" className="nav-brand">
-          KIANI.EXCHANGE
+          {t('siteName')}
         </Link>
 
         <div className="nav-links" dir={lang === 'fa' ? 'rtl' : 'ltr'}>
@@ -30,6 +30,9 @@ function Navigation() {
           {user ? (
             <>
               <Link to="/dashboard" className="nav-link">{t('dashboard')}</Link>
+              <Link to="/services" className="nav-link basket-link">
+                🛒 {t('basket')}
+              </Link>
               <Link to="/admin" className="nav-link">Admin</Link>
               <button onClick={handleLogout} className="nav-button logout">
                 {t('logout')}

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthContext';
+import { useLanguage } from './LanguageContext';
 
 function LoginPage() {
   const [formData, setFormData] = useState({
@@ -12,6 +13,7 @@ function LoginPage() {
   
   const { login } = useAuth();
   const navigate = useNavigate();
+  const { t } = useLanguage();
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -32,15 +34,15 @@ function LoginPage() {
     const newErrors = {};
     
     if (!formData.email) {
-      newErrors.email = 'Email is required';
+      newErrors.email = t('emailRequired');
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Email is invalid';
+      newErrors.email = t('emailInvalid');
     }
     
     if (!formData.password) {
-      newErrors.password = 'Password is required';
+      newErrors.password = t('passwordRequired');
     } else if (formData.password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters';
+      newErrors.password = t('passwordMinLength');
     }
     
     setErrors(newErrors);
@@ -151,18 +153,18 @@ function LoginPage() {
       <div className="login-container">
         <div className="login-card">
           <div className="login-header">
-            <h1 className="login-title">Welcome Back</h1>
+            <h1 className="login-title">{t('welcomeBack')}</h1>
             <p className="login-subtitle">
-              Sign in to your account to access premium AI services
+              {t('signInSubtitle')}
             </p>
             
             {/* Demo Credentials */}
             <div className="demo-credentials">
-              <h4 style={{ margin: '10px 0 5px 0', color: '#666', fontSize: '14px' }}>Demo Credentials:</h4>
+              <h4 style={{ margin: '10px 0 5px 0', color: '#666', fontSize: '14px' }}>{t('demoCredentials')}</h4>
               <div style={{ fontSize: '12px', color: '#888', lineHeight: '1.4' }}>
-                <div><strong>User:</strong> demo@aiservices.com / demo123456</div>
-                <div><strong>Admin:</strong> demoadmin@aiservices.com / demoadmin123456</div>
-                <div><strong>Super Admin:</strong> admin@aiservices.com / admin123456</div>
+                <div><strong>{t('demoUser')}:</strong> demo@aiservices.com / demo123456</div>
+                <div><strong>{t('demoAdmin')}:</strong> demoadmin@aiservices.com / demoadmin123456</div>
+                <div><strong>{t('demoSuperAdmin')}:</strong> admin@aiservices.com / admin123456</div>
               </div>
             </div>
           </div>
@@ -170,7 +172,7 @@ function LoginPage() {
           <form onSubmit={handleSubmit} className="login-form">
             <div className="form-group">
               <label htmlFor="email" className="form-label">
-                Email Address
+                {t('emailAddress')}
               </label>
               <input
                 id="email"
@@ -179,7 +181,7 @@ function LoginPage() {
                 value={formData.email}
                 onChange={handleChange}
                 className={`form-input ${errors.email ? 'error' : ''}`}
-                placeholder="Enter your email"
+                placeholder={t('enterEmail')}
                 disabled={isLoading}
               />
               {errors.email && (
@@ -189,7 +191,7 @@ function LoginPage() {
 
             <div className="form-group">
               <label htmlFor="password" className="form-label">
-                Password
+                {t('password')}
               </label>
               <input
                 id="password"
@@ -198,7 +200,7 @@ function LoginPage() {
                 value={formData.password}
                 onChange={handleChange}
                 className={`form-input ${errors.password ? 'error' : ''}`}
-                placeholder="Enter your password"
+                placeholder={t('enterPassword')}
                 disabled={isLoading}
               />
               {errors.password && (
@@ -206,83 +208,38 @@ function LoginPage() {
               )}
             </div>
 
-            <div className="form-options">
-              <label className="checkbox-label">
-                <input type="checkbox" className="checkbox" />
-                <span className="checkbox-text">Remember me</span>
-              </label>
-              <Link to="/forgot-password" className="forgot-link">
-                Forgot password?
+            <div className="form-actions">
+              <Link to="/forgot-password" className="forgot-password-link">
+                {t('forgotPassword')}
               </Link>
             </div>
 
             {errors.submit && (
-              <div className="submit-error">
+              <div className="error-message submit-error">
                 {errors.submit}
               </div>
             )}
 
             <button
               type="submit"
+              className={`login-button ${isLoading ? 'loading' : ''}`}
               disabled={isLoading}
-              className="login-button"
             >
-              {isLoading ? 'Signing in...' : 'Sign In'}
+              {isLoading ? (
+                <div className="loading-spinner"></div>
+              ) : (
+                t('signInButton')
+              )}
             </button>
           </form>
 
-          <div className="divider">
-            <span className="divider-text">Or continue with</span>
-          </div>
-
-          <button
-            type="button"
-            onClick={handleGoogleLogin}
-            className="google-button"
-          >
-            <span className="google-icon">🔍</span>
-            Continue with Google
-          </button>
-
           <div className="login-footer">
-            <p className="footer-text">
-              Don't have an account?{' '}
-              <Link to="/register" className="footer-link">
-                Sign up for free
+            <p className="signup-prompt">
+              {t('noAccount')}{' '}
+              <Link to="/register" className="signup-link">
+                {t('signUpLink')}
               </Link>
             </p>
-          </div>
-        </div>
-
-        <div className="login-features">
-          <div className="feature-item">
-            <div className="feature-icon">🛡️</div>
-            <div className="feature-content">
-              <h3 className="feature-title">Secure & Safe</h3>
-              <p className="feature-description">
-                Your data is protected with enterprise-grade security
-              </p>
-            </div>
-          </div>
-          
-          <div className="feature-item">
-            <div className="feature-icon">⚡</div>
-            <div className="feature-content">
-              <h3 className="feature-title">Fast Access</h3>
-              <p className="feature-description">
-                Quick login to access all premium AI services instantly
-              </p>
-            </div>
-          </div>
-          
-          <div className="feature-item">
-            <div className="feature-icon">🎧</div>
-            <div className="feature-content">
-              <h3 className="feature-title">24/7 Support</h3>
-              <p className="feature-description">
-                Get help whenever you need it from our support team
-              </p>
-            </div>
           </div>
         </div>
       </div>

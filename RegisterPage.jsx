@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthContext';
+import { useLanguage } from './LanguageContext';
 
 // Password strength checker
 const checkPasswordStrength = (password) => {
@@ -23,6 +24,7 @@ const checkPasswordStrength = (password) => {
 function RegisterPage() {
   const navigate = useNavigate();
   const { login } = useAuth();
+  const { t } = useLanguage();
   
   const [formData, setFormData] = useState({
     firstName: '',
@@ -58,37 +60,37 @@ function RegisterPage() {
     const newErrors = {};
 
     if (!formData.firstName.trim()) {
-      newErrors.firstName = 'First name is required';
+      newErrors.firstName = t('firstNameRequired');
     }
 
     if (!formData.lastName.trim()) {
-      newErrors.lastName = 'Last name is required';
+      newErrors.lastName = t('lastNameRequired');
     }
 
     if (!formData.email.trim()) {
-      newErrors.email = 'Email is required';
+      newErrors.email = t('emailRequired');
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Please enter a valid email address';
+      newErrors.email = t('emailInvalid');
     }
 
     if (!formData.password) {
-      newErrors.password = 'Password is required';
+      newErrors.password = t('passwordRequired');
     } else if (passwordStrength && passwordStrength.score < 3) {
-      newErrors.password = 'Password is too weak';
+      newErrors.password = t('passwordWeak');
     }
 
     if (!formData.confirmPassword) {
-      newErrors.confirmPassword = 'Please confirm your password';
+      newErrors.confirmPassword = t('confirmPasswordRequired');
     } else if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'Passwords do not match';
+      newErrors.confirmPassword = t('passwordsNotMatch');
     }
 
     if (!formData.acceptTerms) {
-      newErrors.acceptTerms = 'You must accept the Terms of Service';
+      newErrors.acceptTerms = t('termsRequired');
     }
 
     if (!formData.acceptPrivacy) {
-      newErrors.acceptPrivacy = 'You must accept the Privacy Policy';
+      newErrors.acceptPrivacy = t('privacyRequired');
     }
 
     return newErrors;
@@ -122,7 +124,7 @@ function RegisterPage() {
       login(userData);
       navigate('/dashboard');
     } catch (error) {
-      setErrors({ submit: 'Registration failed. Please try again.' });
+      setErrors({ submit: t('registrationFailed') });
     } finally {
       setIsLoading(false);
     }
@@ -145,8 +147,8 @@ function RegisterPage() {
     <div className="register-page">
       <div className="register-container">
         <div className="register-header">
-          <h1>Create your account</h1>
-          <p>Join thousands of users managing their finances</p>
+          <h1>{t('createAccount')}</h1>
+          <p>{t('joinUsers')}</p>
         </div>
 
         {errors.submit && (
@@ -159,14 +161,14 @@ function RegisterPage() {
           {/* Name Fields */}
           <div className="name-row">
             <div className="form-group">
-              <label htmlFor="firstName" className="form-label">First name</label>
+              <label htmlFor="firstName" className="form-label">{t('firstName')}</label>
               <div className="input-wrapper">
                 <span className="input-icon">👤</span>
                 <input
                   id="firstName"
                   name="firstName"
                   type="text"
-                  placeholder="Enter your first name"
+                  placeholder={t('enterFirstName')}
                   className="form-input"
                   value={formData.firstName}
                   onChange={handleInputChange}
@@ -178,14 +180,14 @@ function RegisterPage() {
             </div>
 
             <div className="form-group">
-              <label htmlFor="lastName" className="form-label">Last name</label>
+              <label htmlFor="lastName" className="form-label">{t('lastName')}</label>
               <div className="input-wrapper">
                 <span className="input-icon">👤</span>
                 <input
                   id="lastName"
                   name="lastName"
                   type="text"
-                  placeholder="Enter your last name"
+                  placeholder={t('enterLastName')}
                   className="form-input"
                   value={formData.lastName}
                   onChange={handleInputChange}
@@ -199,14 +201,14 @@ function RegisterPage() {
 
           {/* Email Field */}
           <div className="form-group">
-            <label htmlFor="email" className="form-label">Email address</label>
+            <label htmlFor="email" className="form-label">{t('emailAddress')}</label>
             <div className="input-wrapper">
               <span className="input-icon">📧</span>
               <input
                 id="email"
                 name="email"
                 type="email"
-                placeholder="Enter your email"
+                placeholder={t('enterEmail')}
                 className="form-input"
                 value={formData.email}
                 onChange={handleInputChange}
@@ -219,14 +221,14 @@ function RegisterPage() {
 
           {/* Password Field */}
           <div className="form-group">
-            <label htmlFor="password" className="form-label">Password</label>
+            <label htmlFor="password" className="form-label">{t('password')}</label>
             <div className="password-input">
               <span className="input-icon">🔒</span>
               <input
                 id="password"
                 name="password"
                 type={showPassword ? 'text' : 'password'}
-                placeholder="Create a strong password"
+                placeholder={t('createStrongPassword')}
                 className="form-input"
                 value={formData.password}
                 onChange={handleInputChange}
@@ -266,11 +268,11 @@ function RegisterPage() {
                         {passed ? '✓' : '○'}
                       </span>
                       <span className={passed ? 'check-passed' : 'check-failed'}>
-                        {check === 'length' && '8+ characters'}
-                        {check === 'lowercase' && 'Lowercase'}
-                        {check === 'uppercase' && 'Uppercase'}
-                        {check === 'number' && 'Number'}
-                        {check === 'special' && 'Special char'}
+                        {check === 'length' && t('passwordLength')}
+                        {check === 'lowercase' && t('passwordLowercase')}
+                        {check === 'uppercase' && t('passwordUppercase')}
+                        {check === 'number' && t('passwordNumber')}
+                        {check === 'special' && t('passwordSpecial')}
                       </span>
                     </div>
                   ))}
@@ -285,14 +287,14 @@ function RegisterPage() {
 
           {/* Confirm Password Field */}
           <div className="form-group">
-            <label htmlFor="confirmPassword" className="form-label">Confirm password</label>
+            <label htmlFor="confirmPassword" className="form-label">{t('confirmPassword')}</label>
             <div className="password-input">
               <span className="input-icon">🔒</span>
               <input
                 id="confirmPassword"
                 name="confirmPassword"
                 type={showConfirmPassword ? 'text' : 'password'}
-                placeholder="Confirm your password"
+                placeholder={t('confirmPasswordPlaceholder')}
                 className="form-input"
                 value={formData.confirmPassword}
                 onChange={handleInputChange}
@@ -322,9 +324,9 @@ function RegisterPage() {
                 className="checkbox-input"
               />
               <label htmlFor="acceptTerms" className="checkbox-label">
-                I agree to the{' '}
+                {t('agreeToTerms')}{' '}
                 <Link to="/terms" className="link">
-                  Terms of Service
+                  {t('termsOfService')}
                 </Link>
               </label>
             </div>
@@ -342,9 +344,9 @@ function RegisterPage() {
                 className="checkbox-input"
               />
               <label htmlFor="acceptPrivacy" className="checkbox-label">
-                I agree to the{' '}
+                {t('agreeToPrivacy')}{' '}
                 <Link to="/privacy" className="link">
-                  Privacy Policy
+                  {t('privacyPolicy')}
                 </Link>
               </label>
             </div>
@@ -362,17 +364,17 @@ function RegisterPage() {
             {isLoading ? (
               <>
                 <span className="loading-spinner">⏳</span>
-                Creating account...
+                {t('creatingAccount')}
               </>
             ) : (
-              'Create account'
+              t('createAccountButton')
             )}
           </button>
         </form>
 
         {/* Divider */}
         <div className="divider">
-          <span>Or continue with</span>
+          <span>{t('orContinueWith')}</span>
         </div>
 
         {/* Google Signup */}
@@ -382,14 +384,14 @@ function RegisterPage() {
           onClick={handleGoogleSignup}
         >
           <span className="google-icon">🔍</span>
-          Continue with Google
+          {t('continueWithGoogle')}
         </button>
 
         {/* Sign In Link */}
         <div className="register-links">
-          <span>Already have an account? </span>
+          <span>{t('alreadyHaveAccount')} </span>
           <Link to="/login" className="link">
-            Sign in
+            {t('signInLink')}
           </Link>
         </div>
       </div>

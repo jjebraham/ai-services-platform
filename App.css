@@ -17,6 +17,49 @@ body {
   transition: background-color 0.3s, color 0.3s;
 }
 
+/* Persian/RTL Font Support */
+body.rtl {
+  font-family: 'Vazirmatn', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  direction: rtl;
+  text-align: right;
+}
+
+body.rtl * {
+  font-family: 'Vazirmatn', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+}
+
+/* RTL specific adjustments */
+body.rtl .nav-container {
+  flex-direction: row-reverse;
+}
+
+body.rtl .nav-links {
+  flex-direction: row-reverse;
+}
+
+body.rtl .card {
+  text-align: right;
+}
+
+body.rtl input, body.rtl textarea, body.rtl select {
+  text-align: right;
+  direction: rtl;
+}
+
+body.rtl .btn {
+  direction: rtl;
+}
+
+/* Ensure proper spacing for Persian text */
+body.rtl p, body.rtl h1, body.rtl h2, body.rtl h3, body.rtl h4, body.rtl h5, body.rtl h6 {
+  line-height: 1.8;
+  letter-spacing: 0.02em;
+}
+
 body.light-theme {
   background-color: #f0f0f0;
   color: #000000;
