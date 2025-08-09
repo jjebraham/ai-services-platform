@@ -1,151 +1,134 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import { useLanguage } from './LanguageContext';
 
+function OtpInput({ value, onChange, disabled }) {
+  const vals = useMemo(() => (value || '').padEnd(6, ' ').slice(0, 6).split(''), [value]);
+  return (
+    <div style={{ display: 'flex', gap: 8 }}>
+      {vals.map((ch, i) => (
+        <input
+          key={i}
+          inputMode="numeric"
+          pattern="\d*"
+          maxLength={1}
+          value={ch.trim()}
+          disabled={disabled}
+          onChange={(e) => {
+            const s = (value || '').split('');
+            s[i] = e.target.value.replace(/\D/g, '').slice(0, 1);
+            onChange(s.join('').slice(0, 6));
+          }}
+          style={{
+            width: 42,
+            height: 48,
+            textAlign: 'center',
+            fontSize: 22,
+            border: '1px solid #444',
+            background: '#111',
+            color: '#fff',
+            borderRadius: 8,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
 function LoginPage() {
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-  });
+  const [phone, setPhone] = useState('');
+  const [otp, setOtp] = useState('');
+  const [step, setStep] = useState('phone'); // phone | otp
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
-  
+  const [resendIn, setResendIn] = useState(0);
+
   const { login } = useAuth();
   const navigate = useNavigate();
   const { t } = useLanguage();
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-    // Clear error when user starts typing
-    if (errors[name]) {
-      setErrors(prev => ({
-        ...prev,
-        [name]: ''
-      }));
-    }
+  const validatePhone = () => {
+    const e = {};
+    const p = phone.replace(/\D/g, '');
+    if (!/^09\d{9}$/.test(p)) e.phone = t('phoneInvalid') || 'Invalid phone (e.g. 09XXXXXXXXX)';
+    setErrors(e);
+    return Object.keys(e).length === 0;
   };
 
-  const validateForm = () => {
-    const newErrors = {};
-    
-    if (!formData.email) {
-      newErrors.email = t('emailRequired');
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = t('emailInvalid');
-    }
-    
-    if (!formData.password) {
-      newErrors.password = t('passwordRequired');
-    } else if (formData.password.length < 6) {
-      newErrors.password = t('passwordMinLength');
-    }
-    
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    
-    if (!validateForm()) {
-      return;
-    }
-
+  const startOtp = async () => {
     setIsLoading(true);
-    
     try {
-      // Try to authenticate with backend API
-      const response = await fetch('/api/auth/login', {
+      const resp = await fetch('/api/otp/start', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: formData.email,
-          password: formData.password,
-        }),
-        credentials: 'include', // Include cookies
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ phone }),
       });
-
-      const data = await response.json();
-
-      if (response.ok && data.success) {
-        // Backend authentication successful
-        const userData = {
-          id: data.user.id,
-          email: data.user.email,
-          name: data.user.name || data.user.email.split('@')[0],
-          role: data.user.role || 'user',
-          balance: data.user.balance || 0
-        };
-        
-        login(userData);
-        navigate('/dashboard');
-      } else {
-        // Backend authentication failed, check if it's a demo user
-        const demoUsers = {
-          'demo@aiservices.com': { password: 'demo123456', name: 'Demo User', role: 'user' },
-          'demoadmin@aiservices.com': { password: 'demoadmin123456', name: 'Demo Admin', role: 'admin' },
-          'admin@aiservices.com': { password: 'admin123456', name: 'System Administrator', role: 'admin' }
-        };
-
-        const demoUser = demoUsers[formData.email];
-        if (demoUser && demoUser.password === formData.password) {
-          // Demo user authentication
-          const userData = {
-            id: 'demo_' + Date.now(),
-            email: formData.email,
-            name: demoUser.name,
-            role: demoUser.role,
-            balance: 1250.75,
-            isDemo: true
-          };
-          
-          login(userData);
-          navigate('/dashboard');
-        } else {
-          setErrors({ submit: data.message || 'Invalid email or password' });
-        }
-      }
-    } catch (error) {
-      console.error('Login error:', error);
-      
-      // Fallback to demo user authentication if backend is not available
-      const demoUsers = {
-        'demo@aiservices.com': { password: 'demo123456', name: 'Demo User', role: 'user' },
-        'demoadmin@aiservices.com': { password: 'demoadmin123456', name: 'Demo Admin', role: 'admin' },
-        'admin@aiservices.com': { password: 'admin123456', name: 'System Administrator', role: 'admin' }
-      };
-
-      const demoUser = demoUsers[formData.email];
-      if (demoUser && demoUser.password === formData.password) {
-        const userData = {
-          id: 'demo_' + Date.now(),
-          email: formData.email,
-          name: demoUser.name,
-          role: demoUser.role,
-          balance: 1250.75,
-          isDemo: true
-        };
-        
-        login(userData);
-        navigate('/dashboard');
-      } else {
-        setErrors({ submit: 'Login failed. Please check your credentials.' });
-      }
+      const data = await resp.json();
+      if (!resp.ok || !data.success) throw new Error(data.message || 'Failed to send OTP');
+      setStep('otp');
+      setResendIn(45);
+      const iv = setInterval(
+        () =>
+          setResendIn((x) => {
+            if (x <= 1) {
+              clearInterval(iv);
+              return 0;
+            }
+            return x - 1;
+          }),
+        1000,
+      );
+    } catch (err) {
+      setErrors({ submit: err.message });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleGoogleLogin = () => {
-    // Placeholder for Google OAuth
-    alert('Google login will be implemented soon!');
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (step === 'phone') {
+      if (!validatePhone()) return;
+      await startOtp();
+      return;
+    }
+    if (!/^\d{6}$/.test(otp)) {
+      setErrors({ submit: t('codeInvalid') || 'Enter the 6-digit code' });
+      return;
+    }
+    setIsLoading(true);
+    try {
+      const resp = await fetch('/api/otp/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ phone, code: otp }),
+      });
+      const data = await resp.json();
+      if (!resp.ok || !data.success) throw new Error(data.message || 'Verification failed');
+
+      login({
+        id: data.user.id,
+        phone: data.user.phone,
+        email: data.user.phone,
+        firstName: data.user.first_name,
+        lastName: data.user.last_name,
+        role: data.user.role || 'user',
+        balance: data.user.balance || 0,
+      });
+      navigate('/dashboard');
+    } catch (err) {
+      setErrors({ submit: err.message });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const resend = async () => {
+    if (resendIn > 0) return;
+    await startOtp();
   };
 
   return (
@@ -154,82 +137,59 @@ function LoginPage() {
         <div className="login-card">
           <div className="login-header">
             <h1 className="login-title">{t('welcomeBack')}</h1>
-            <p className="login-subtitle">
-              {t('signInSubtitle')}
-            </p>
-            
-            {/* Demo Credentials */}
-            <div className="demo-credentials">
-              <h4 style={{ margin: '10px 0 5px 0', color: '#666', fontSize: '14px' }}>{t('demoCredentials')}</h4>
-              <div style={{ fontSize: '12px', color: '#888', lineHeight: '1.4' }}>
-                <div><strong>{t('demoUser')}:</strong> demo@aiservices.com / demo123456</div>
-                <div><strong>{t('demoAdmin')}:</strong> demoadmin@aiservices.com / demoadmin123456</div>
-                <div><strong>{t('demoSuperAdmin')}:</strong> admin@aiservices.com / admin123456</div>
-              </div>
-            </div>
+            <p className="login-subtitle">{t('signInSubtitle')}</p>
           </div>
 
           <form onSubmit={handleSubmit} className="login-form">
-            <div className="form-group">
-              <label htmlFor="email" className="form-label">
-                {t('emailAddress')}
-              </label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                value={formData.email}
-                onChange={handleChange}
-                className={`form-input ${errors.email ? 'error' : ''}`}
-                placeholder={t('enterEmail')}
-                disabled={isLoading}
-              />
-              {errors.email && (
-                <span className="error-message">{errors.email}</span>
-              )}
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="password" className="form-label">
-                {t('password')}
-              </label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                value={formData.password}
-                onChange={handleChange}
-                className={`form-input ${errors.password ? 'error' : ''}`}
-                placeholder={t('enterPassword')}
-                disabled={isLoading}
-              />
-              {errors.password && (
-                <span className="error-message">{errors.password}</span>
-              )}
-            </div>
-
-            <div className="form-actions">
-              <Link to="/forgot-password" className="forgot-password-link">
-                {t('forgotPassword')}
-              </Link>
-            </div>
-
-            {errors.submit && (
-              <div className="error-message submit-error">
-                {errors.submit}
+            {step === 'phone' && (
+              <div className="form-group">
+                <label htmlFor="phone" className="form-label">
+                  {t('phoneNumber') || 'Phone number'}
+                </label>
+                <input
+                  id="phone"
+                  name="phone"
+                  type="tel"
+                  inputMode="numeric"
+                  value={phone}
+                  onChange={(e) => {
+                    setPhone(e.target.value);
+                    if (errors.phone) setErrors({});
+                  }}
+                  className={`form-input ${errors.phone ? 'error' : ''}`}
+                  placeholder="مثلاً 09123456789"
+                  disabled={isLoading}
+                />
+                {errors.phone && <span className="error-message">{errors.phone}</span>}
               </div>
             )}
 
-            <button
-              type="submit"
-              className={`login-button ${isLoading ? 'loading' : ''}`}
-              disabled={isLoading}
-            >
-              {isLoading ? (
-                <div className="loading-spinner"></div>
-              ) : (
-                t('signInButton')
-              )}
+            {step === 'otp' && (
+              <div className="form-group">
+                <label className="form-label">
+                  {t('enterOtp') || 'Enter the 6-digit code'}
+                </label>
+                <OtpInput value={otp} onChange={setOtp} disabled={isLoading} />
+                <div style={{ marginTop: 12, fontSize: 13, color: '#888' }}>
+                  {resendIn > 0 ? (
+                    (t('resendIn') || 'Resend in') + ` ${resendIn}s`
+                  ) : (
+                    <button type="button" onClick={resend} className="link">
+                      {t('resendCode') || 'Resend code'}
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {errors.submit && <div className="error-message submit-error">{errors.submit}</div>}
+
+            <button type="submit" className={`login-button ${isLoading ? 'loading' : ''}`} disabled={isLoading}>
+              {isLoading
+                ? '⏳'
+                : step === 'phone'
+                ? t('sendVerificationCode') || 'Send code'
+                : t('verifyAndLogin') || 'Verify & Login'}
             </button>
           </form>
 
