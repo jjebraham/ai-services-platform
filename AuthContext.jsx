@@ -42,12 +42,14 @@ export const AuthProvider = ({ children }) => {
             if (data.isAuthenticated && data.user) {
               const userData = {
                 id: data.user.id,
-                email: data.user.email,
-                name: data.user.name || data.user.email.split('@')[0],
+                phone: data.user.phone,
+                email: data.user.phone,
+                firstName: data.user.first_name,
+                lastName: data.user.last_name,
                 role: data.user.role || 'user',
                 balance: data.user.balance || 0
               };
-              
+
               localStorage.setItem('user', JSON.stringify(userData));
               setIsAuthenticated(true);
               setUser(userData);
@@ -84,10 +86,10 @@ export const AuthProvider = ({ children }) => {
   const register = async (userData) => {
     try {
       // Mock registration - in production, this would be an API call
-      if (userData.email && userData.password) {
+      if (userData.phone) {
         return { success: true };
       } else {
-        return { success: false, error: 'Email and password required' };
+        return { success: false, error: 'Phone required' };
       }
     } catch (error) {
       return { success: false, error: 'Registration failed' };
