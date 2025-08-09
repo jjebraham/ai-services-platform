@@ -1,0 +1,13 @@
+[33mcommit aae909770d635df3b1628ecfe49a2a40cb32ca6a[m[33m ([m[1;36mHEAD -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m
+Merge: db97e90 6fc09b4
+Author: jjebraham <77538231+jjebraham@users.noreply.github.com>
+Date:   Thu Aug 7 02:17:13 2025 +0300
+
+    Merge pull request #3 from jjebraham/codex/update-website-design-and-layout
+    
+    feat: enhance rtl support and theme styling
+
+ App.css             | 30 [32m++++++++++++++++++++++[m[31m--------[m
+ LanguageContext.jsx |  8 [32m+++++++[m[31m-[m
+ ServicesPage.jsx    | 20 [31m--------------------[m
+ 3 files changed, 29 insertions(+), 29 deletions(-)
