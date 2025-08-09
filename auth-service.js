@@ -1,6 +1,6 @@
-const supabaseConfig = require('../supabase-config');
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
+import supabaseConfig from '../supabase-config.js';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
 
 class AuthService {
   constructor() {
@@ -9,7 +9,7 @@ class AuthService {
 
   // Register new user
   async register(userData) {
-    const { email, password, fullName, phoneNumber } = userData;
+    const { email, password, fullName } = userData;
 
     try {
       // Check if Supabase is configured
@@ -31,7 +31,7 @@ class AuthService {
         };
       }
 
-      // Check if user already exists by email
+      // Check if user already exists
       const { data: existingUser } = await supabase
         .from('user_profiles')
         .select('email')
@@ -40,19 +40,6 @@ class AuthService {
 
       if (existingUser) {
         return { success: false, error: 'User already exists with this email' };
-      }
-
-      // Check if phone number already exists
-      if (phoneNumber) {
-        const { data: existingPhone } = await supabase
-          .from('user_profiles')
-          .select('phone')
-          .eq('phone', phoneNumber)
-          .single();
-
-        if (existingPhone) {
-          return { success: false, error: 'Phone number already registered' };
-        }
       }
 
       // Hash password
@@ -82,8 +69,6 @@ class AuthService {
             id: authData.user.id,
             email,
             full_name: fullName,
-            phone: phoneNumber,
-            is_phone_verified: true,
             password_hash: hashedPassword,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString(),
@@ -109,8 +94,6 @@ class AuthService {
           id: profileData.id,
           email: profileData.email,
           fullName: profileData.full_name,
-          phoneNumber: profileData.phone,
-          isPhoneVerified: profileData.is_phone_verified,
           role: profileData.role
         }
       };
@@ -405,4 +388,4 @@ class AuthService {
   }
 }
 
-module.exports = new AuthService();
+export default new AuthService();

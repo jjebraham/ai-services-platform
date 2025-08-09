@@ -1,19 +1,19 @@
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const authService = require('../services/auth-service');
-const supabaseConfig = require('../supabase-config');
-const otpService = require('../services/otp-service');
+import authService from '../services/auth-service.js';
+import supabaseConfig from '../supabase-config.js';
+import otpService from '../services/otp-service.js';
 
-// Register route with phone number and OTP verification
+// Register route
 router.post('/register', async (req, res) => {
   try {
-    const { firstName, lastName, email, phoneNumber, password, verificationId } = req.body;
+    const { email, password, fullName } = req.body;
 
     // Validation
-    if (!firstName || !lastName || !email || !phoneNumber || !password || !verificationId) {
+    if (!email || !password || !fullName) {
       return res.status(400).json({
         success: false,
-        error: 'All fields are required including phone verification'
+        error: 'Email, password, and full name are required'
       });
     }
 
@@ -24,39 +24,10 @@ router.post('/register', async (req, res) => {
       });
     }
 
-    // Validate phone number format
-    const phoneRegex = /^09\d{9}$/;
-    if (!phoneRegex.test(phoneNumber)) {
-      return res.status(400).json({
-        success: false,
-        error: 'Invalid phone number format'
-      });
-    }
-
-    // Check if phone number is already verified (optional verification)
-    const phoneVerified = await otpService.verifyOTP(phoneNumber, 'dummy');
-    // Note: In a real implementation, you'd use the actual OTP from verificationId
-
-    const fullName = `${firstName} ${lastName}`;
-    const result = await authService.register({ 
-      email, 
-      password, 
-      fullName,
-      phoneNumber 
-    });
+    const result = await authService.register({ email, password, fullName });
 
     if (result.success) {
-      // Update phone verification status
-      await authService.updatePhoneVerification(result.user.id, true);
-      
-      res.status(201).json({
-        ...result,
-        user: {
-          ...result.user,
-          phoneNumber: phoneNumber,
-          isPhoneVerified: true
-        }
-      });
+      res.status(201).json(result);
     } else {
       res.status(400).json(result);
     }
@@ -345,4 +316,4 @@ router.post('/verify-otp', async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;

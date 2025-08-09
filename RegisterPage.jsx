@@ -30,11 +30,17 @@ function RegisterPage() {
     firstName: '',
     lastName: '',
     email: '',
+    phoneNumber: '',
     password: '',
     confirmPassword: '',
     acceptTerms: false,
     acceptPrivacy: false
   });
+  
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpCode, setOtpCode] = useState('');
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [verificationId, setVerificationId] = useState('');
 
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
@@ -73,6 +79,12 @@ function RegisterPage() {
       newErrors.email = t('emailInvalid');
     }
 
+    if (!formData.phoneNumber.trim()) {
+      newErrors.phoneNumber = t('phoneNumberRequired');
+    } else if (!/^09\d{9}$/.test(formData.phoneNumber)) {
+      newErrors.phoneNumber = t('phoneNumberInvalid');
+    }
+
     if (!formData.password) {
       newErrors.password = t('passwordRequired');
     } else if (passwordStrength && passwordStrength.score < 3) {
@@ -96,9 +108,7 @@ function RegisterPage() {
     return newErrors;
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    
+  const handleSendOTP = async () => {
     const newErrors = validateForm();
     if (Object.keys(newErrors).length > 0) {
       setErrors(newErrors);
@@ -109,24 +119,98 @@ function RegisterPage() {
     setErrors({});
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Mock successful registration
-      const userData = {
-        id: Date.now(),
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        email: formData.email,
-        balance: 0
-      };
+      const response = await fetch('/api/auth/send-otp', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          phoneNumber: formData.phoneNumber
+        })
+      });
 
-      login(userData);
-      navigate('/dashboard');
+      const result = await response.json();
+
+      if (result.success) {
+        setOtpSent(true);
+        setVerificationId(result.verificationId);
+        setErrors({});
+      } else {
+        setErrors({ otp: result.error });
+      }
     } catch (error) {
-      setErrors({ submit: t('registrationFailed') });
+      setErrors({ otp: t('otpSendFailed') });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleVerifyOTP = async () => {
+    if (!otpCode || otpCode.length !== 6) {
+      setErrors({ otp: t('invalidOtpCode') });
+      return;
+    }
+
+    setIsVerifying(true);
+    setErrors({});
+
+    try {
+      const response = await fetch('/api/auth/verify-otp', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          phoneNumber: formData.phoneNumber,
+          otpCode: otpCode,
+          verificationId: verificationId
+        })
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        // Now complete the registration
+        const registerResponse = await fetch('/api/auth/register', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            firstName: formData.firstName,
+            lastName: formData.lastName,
+            email: formData.email,
+            phoneNumber: formData.phoneNumber,
+            password: formData.password,
+            verificationId: verificationId
+          })
+        });
+
+        const registerResult = await registerResponse.json();
+
+        if (registerResult.success) {
+          login(registerResult.user);
+          navigate('/dashboard');
+        } else {
+          setErrors({ submit: registerResult.error });
+        }
+      } else {
+        setErrors({ otp: result.error });
+      }
+    } catch (error) {
+      setErrors({ otp: t('otpVerificationFailed') });
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!otpSent) {
+      await handleSendOTP();
+    } else {
+      await handleVerifyOTP();
     }
   };
 
@@ -218,6 +302,51 @@ function RegisterPage() {
               <p className="form-error">{errors.email}</p>
             )}
           </div>
+
+          {/* Phone Number Field */}
+          <div className="form-group">
+            <label htmlFor="phoneNumber" className="form-label">{t('phoneNumber')}</label>
+            <div className="input-wrapper">
+              <span className="input-icon">📱</span>
+              <input
+                id="phoneNumber"
+                name="phoneNumber"
+                type="tel"
+                placeholder={t('enterPhoneNumber')}
+                className="form-input"
+                value={formData.phoneNumber}
+                onChange={handleInputChange}
+                disabled={otpSent}
+              />
+            </div>
+            {errors.phoneNumber && (
+              <p className="form-error">{errors.phoneNumber}</p>
+            )}
+          </div>
+
+          {/* OTP Verification Field */}
+          {otpSent && (
+            <div className="form-group">
+              <label htmlFor="otpCode" className="form-label">{t('verificationCode')}</label>
+              <div className="input-wrapper">
+                <span className="input-icon">🔒</span>
+                <input
+                  id="otpCode"
+                  name="otpCode"
+                  type="text"
+                  maxLength="6"
+                  placeholder={t('enterVerificationCode')}
+                  className="form-input"
+                  value={otpCode}
+                  onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
+                />
+              </div>
+              {errors.otp && (
+                <p className="form-error">{errors.otp}</p>
+              )}
+              <p className="otp-info">{t('otpSentMessage')}</p>
+            </div>
+          )}
 
           {/* Password Field */}
           <div className="form-group">
@@ -359,15 +488,22 @@ function RegisterPage() {
           <button
             type="submit"
             className="register-button"
-            disabled={isLoading}
+            disabled={isLoading || isVerifying}
           >
-            {isLoading ? (
+            {isVerifying ? (
               <>
                 <span className="loading-spinner">⏳</span>
-                {t('creatingAccount')}
+                {t('verifying')}
               </>
+            ) : isLoading ? (
+              <>
+                <span className="loading-spinner">⏳</span>
+                {t('sendingCode')}
+              </>
+            ) : otpSent ? (
+              t('verifyAndRegister')
             ) : (
-              t('createAccountButton')
+              t('sendCode')
             )}
           </button>
         </form>
