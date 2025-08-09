@@ -2,6 +2,7 @@
   "name": "ai-services-platform-backend",
   "version": "1.0.0",
   "description": "Backend API for AI Services Platform",
+  "type": "module",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -54,6 +55,7 @@
     "express-session": "^1.18.2",
     "express-validator": "^7.2.1",
     "helmet": "^8.1.0",
+    "https-proxy-agent": "^7.0.6",
     "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.539.0",
     "mongoose": "^8.16.5",

@@ -1,6 +1,6 @@
-const supabaseConfig = require('../supabase-config');
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
+import supabaseConfig from '../supabase-config.js';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
 
 class AuthService {
   constructor() {
@@ -272,6 +272,120 @@ class AuthService {
       return { success: false, error: 'Logout failed' };
     }
   }
+
+  // Phone authentication methods
+
+  // Find user by phone number
+  async findUserByPhone(phoneNumber) {
+    try {
+      const supabase = supabaseConfig.getClient();
+
+      if (!supabase) {
+        return null;
+      }
+
+      const { data: userProfile, error } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('phone', phoneNumber)
+        .eq('is_active', true)
+        .single();
+
+      if (error || !userProfile) {
+        return null;
+      }
+
+      return userProfile;
+
+    } catch (error) {
+      console.error('Find user by phone error:', error);
+      return null;
+    }
+  }
+
+  // Create user with phone number
+  async createUserWithPhone(userData) {
+    try {
+      const supabase = supabaseConfig.getClient();
+
+      if (!supabase) {
+        return { success: false, error: 'Database connection not available' };
+      }
+
+      // Generate a unique email for phone-only users
+      const uniqueEmail = `${userData.phone}@phone.kiani.exchange`;
+
+      // Create user profile
+      const { data: profileData, error: profileError } = await supabase
+        .from('user_profiles')
+        .insert([
+          {
+            email: uniqueEmail,
+            phone: userData.phone,
+            full_name: userData.fullName,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+            is_active: true,
+            is_phone_verified: userData.isPhoneVerified || false,
+            role: 'user'
+          }
+        ])
+        .select()
+        .single();
+
+      if (profileError) {
+        return { success: false, error: profileError.message };
+      }
+
+      return {
+        success: true,
+        message: 'User created successfully',
+        user: profileData
+      };
+
+    } catch (error) {
+      console.error('Create user with phone error:', error);
+      return { success: false, error: 'Failed to create user' };
+    }
+  }
+
+  // Update phone verification status
+  async updatePhoneVerification(userId, isVerified) {
+    try {
+      const supabase = supabaseConfig.getClient();
+
+      if (!supabase) {
+        return { success: false, error: 'Database connection not available' };
+      }
+
+      const { error } = await supabase
+        .from('user_profiles')
+        .update({
+          is_phone_verified: isVerified,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', userId);
+
+      if (error) {
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, message: 'Phone verification status updated' };
+
+    } catch (error) {
+      console.error('Update phone verification error:', error);
+      return { success: false, error: 'Failed to update phone verification' };
+    }
+  }
+
+  // Generate JWT token
+  generateToken(userId) {
+    return jwt.sign(
+      { userId },
+      process.env.JWT_SECRET || 'your-jwt-secret',
+      { expiresIn: '24h' }
+    );
+  }
 }
 
-module.exports = new AuthService();
+export default new AuthService();

@@ -1,7 +1,8 @@
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const authService = require('../services/auth-service');
-const supabaseConfig = require('../supabase-config');
+import authService from '../services/auth-service.js';
+import supabaseConfig from '../supabase-config.js';
+import otpService from '../services/otp-service.js';
 
 // Register route
 router.post('/register', async (req, res) => {
@@ -184,4 +185,135 @@ router.get('/status', async (req, res) => {
   }
 });
 
-module.exports = router;
+// Phone authentication routes
+
+// Send OTP to phone number
+router.post('/send-otp', async (req, res) => {
+  try {
+    const { phoneNumber } = req.body;
+
+    // Validation
+    if (!phoneNumber) {
+      return res.status(400).json({
+        success: false,
+        error: 'Phone number is required'
+      });
+    }
+
+    // Validate phone number format (basic validation)
+    const phoneRegex = /^(\+98|0)?9\d{9}$/;
+    if (!phoneRegex.test(phoneNumber.replace(/\s/g, ''))) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid phone number format'
+      });
+    }
+
+    const result = await otpService.sendOTP(phoneNumber);
+
+    if (result.success) {
+      res.json({
+        success: true,
+        message: result.message,
+        expiresIn: result.expiresIn
+      });
+    } else {
+      res.status(400).json(result);
+    }
+
+  } catch (error) {
+    console.error('Send OTP error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to send OTP'
+    });
+  }
+});
+
+// Verify OTP and login/register user
+router.post('/verify-otp', async (req, res) => {
+  try {
+    const { phoneNumber, otp } = req.body;
+
+    // Validation
+    if (!phoneNumber || !otp) {
+      return res.status(400).json({
+        success: false,
+        error: 'Phone number and OTP are required'
+      });
+    }
+
+    // Verify OTP
+    const otpResult = await otpService.verifyOTP(phoneNumber, otp);
+
+    if (!otpResult.success) {
+      return res.status(400).json(otpResult);
+    }
+
+    // OTP is valid, now check if user exists or create new user
+    const normalizedPhone = otpService.normalizePhoneNumber(phoneNumber);
+    
+    try {
+      // Try to find existing user by phone
+      let user = await authService.findUserByPhone(normalizedPhone);
+      
+      if (!user) {
+        // Create new user with phone number
+        const userData = {
+          phone: normalizedPhone,
+          fullName: `User ${normalizedPhone.slice(-4)}`, // Temporary name
+          isPhoneVerified: true
+        };
+        
+        const createResult = await authService.createUserWithPhone(userData);
+        
+        if (!createResult.success) {
+          return res.status(400).json(createResult);
+        }
+        
+        user = createResult.user;
+      } else {
+        // Update phone verification status
+        await authService.updatePhoneVerification(user.id, true);
+      }
+
+      // Generate JWT token
+      const token = authService.generateToken(user.id);
+
+      // Set HTTP-only cookie with JWT token
+      res.cookie('token', token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 24 * 60 * 60 * 1000 // 24 hours
+      });
+
+      res.json({
+        success: true,
+        message: 'Phone verification successful',
+        user: {
+          id: user.id,
+          phone: user.phone,
+          fullName: user.fullName,
+          isPhoneVerified: true
+        }
+      });
+
+    } catch (dbError) {
+      console.error('Database error during phone auth:', dbError);
+      res.status(500).json({
+        success: false,
+        error: 'Database error during authentication'
+      });
+    }
+
+  } catch (error) {
+    console.error('Verify OTP error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to verify OTP'
+    });
+  }
+});
+
+export default router;

@@ -143,26 +143,23 @@ export const authAPI = {
   // Logout user
   logout: () => api.post('/auth/logout'),
   
-  // Get current user profile
-  getProfile: () => api.get('/auth/me'),
+  // Get current user
+  me: () => api.get('/auth/me'),
   
-  // Update user profile
-  updateProfile: (profileData) => api.put('/auth/profile', profileData),
-  
-  // Request password reset
+  // Forgot password
   forgotPassword: (email) => api.post('/auth/forgot-password', { email }),
   
   // Reset password
   resetPassword: (token, password) => api.post('/auth/reset-password', { token, password }),
   
-  // Verify email
-  verifyEmail: (token) => api.post('/auth/verify-email', { token }),
-  
   // Resend verification email
   resendVerification: () => api.post('/auth/resend-verification'),
+
+  // Phone authentication
+  sendOTP: (phoneNumber) => api.post('/otp/start', { phone: phoneNumber }),
   
-  // Google OAuth login
-  googleLogin: (credential) => api.post('/auth/google', { credential }),
+  // Verify OTP
+  verifyOTP: (phoneNumber, otp) => api.post('/otp/verify', { phone: phoneNumber, otp }),
 };
 
 // KYC API methods
