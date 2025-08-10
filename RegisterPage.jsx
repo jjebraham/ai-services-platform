@@ -93,7 +93,7 @@ function RegisterPage() {
         body: JSON.stringify({ phone: formData.phone }),
       });
       const data = await resp.json();
-      if (!resp.ok || !data.success) throw new Error(data.message || 'Failed to send OTP');
+      if (!resp.ok || !data.success) throw new Error(data.message || data.error || 'Failed to send OTP');
       setStep('otp');
       setResendIn(45);
       const iv = setInterval(
@@ -134,7 +134,7 @@ function RegisterPage() {
           credentials: 'include',
           body: JSON.stringify({
             phone: formData.phone,
-            code: otp,
+            otp,
             profile: {
               first_name: formData.firstName,
               last_name: formData.lastName,
@@ -143,7 +143,7 @@ function RegisterPage() {
           }),
         });
         const data = await resp.json();
-        if (!resp.ok || !data.success) throw new Error(data.message || 'Verification failed');
+        if (!resp.ok || !data.success) throw new Error(data.message || data.error || 'Verification failed');
 
         login({
           id: data.user.id,
