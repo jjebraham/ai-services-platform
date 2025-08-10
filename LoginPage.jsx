@@ -66,7 +66,7 @@ function LoginPage() {
         body: JSON.stringify({ phone }),
       });
       const data = await resp.json();
-      if (!resp.ok || !data.success) throw new Error(data.message || 'Failed to send OTP');
+      if (!resp.ok || !data.success) throw new Error(data.message || data.error || 'Failed to send OTP');
       setStep('otp');
       setResendIn(45);
       const iv = setInterval(
@@ -104,10 +104,10 @@ function LoginPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ phone, code: otp }),
+        body: JSON.stringify({ phone, otp }),
       });
       const data = await resp.json();
-      if (!resp.ok || !data.success) throw new Error(data.message || 'Verification failed');
+      if (!resp.ok || !data.success) throw new Error(data.message || data.error || 'Verification failed');
 
       login({
         id: data.user.id,

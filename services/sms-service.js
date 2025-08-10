@@ -3,8 +3,10 @@ import { HttpsProxyAgent } from 'https-proxy-agent';
 
 class SMSService {
   constructor() {
-    // Try Kavenegar as alternative SMS provider
-    this.kavenegarApiKey = '6B6B6B6B6B6B6B6B6B6B6B6B6B6B6B6B';
+    // Try Kavenegar and Ghasedak as SMS providers. Keys are read from env
+    // variables so production deployments can configure them without
+    // modifying source code.
+    this.kavenegarApiKey = process.env.KAVENEGAR_API_KEY;
     this.ghasedakApiKey = process.env.GHASEDAK_API_KEY;
     this.template = process.env.GHASEDAK_TEMPLATE_NAME || 'verify';
     this.proxyEnabled = process.env.USE_PROXY === '1';
@@ -37,14 +39,16 @@ class SMSService {
       };
     }
 
-    // Try Kavenegar first
-    try {
-      const result = await this.sendViaKavenegar(phone, code);
-      if (result.success) {
-        return result;
+    // Try Kavenegar first if an API key is configured
+    if (this.kavenegarApiKey) {
+      try {
+        const result = await this.sendViaKavenegar(phone, code);
+        if (result.success) {
+          return result;
+        }
+      } catch (error) {
+        console.log('Kavenegar failed, trying Ghasedak:', error.message);
       }
-    } catch (error) {
-      console.log('Kavenegar failed, trying Ghasedak:', error.message);
     }
 
     // Fallback to Ghasedak
@@ -77,6 +81,10 @@ class SMSService {
   }
 
   async sendViaGhasedak(phone, code) {
+    if (!this.ghasedakApiKey) {
+      return { success: false, error: 'Ghasedak API key not configured' };
+    }
+
     const payload = new URLSearchParams({
       receptor: phone,
       template: this.template,
