@@ -18,9 +18,9 @@ import {
   FileText,
   ExternalLink
 } from 'lucide-react';
-import { api } from '../lib/api';
-import { useAuth } from '../contexts/AuthContext';
-import LoadingSpinner from '../components/LoadingSpinner';
+import api from './services/apiClient';
+import { useAuth } from './AuthContext';
+import LoadingSpinner from './LoadingSpinner';
 
 const OrdersPage = () => {
   const { user } = useAuth();

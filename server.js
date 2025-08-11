@@ -30,6 +30,7 @@ const { notFound } = require('./notFound');
 const authRoutes = require('./routes/auth-routes');
 const orderRoutes = require('./routes/orders');
 const adminRoutes = require('./routes/admin-routes');
+const otpRoutes = require('./routes/otp-routes');
 
 // Import utilities
 const { initializeApp } = require('./initialize');
@@ -145,6 +146,7 @@ app.get('/health', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/otp', otpRoutes);
 
 // Serve frontend in production
 if (process.env.NODE_ENV === 'production') {

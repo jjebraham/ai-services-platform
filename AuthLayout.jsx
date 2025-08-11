@@ -1,6 +1,6 @@
 import React from 'react';
 import { Outlet, Link, Navigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from './AuthContext';
 import { Zap } from 'lucide-react';
 import LoadingSpinner from './LoadingSpinner';
 

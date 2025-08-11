@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import { useLanguage } from './LanguageContext';
-import { authAPI } from './api';
+import { authAPI } from './services/apiClient';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
@@ -25,7 +25,7 @@ function LoginPage() {
   const { login, error, clearError } = useAuth();
   const { t } = useLanguage();
   const navigate = useNavigate();
-  
+
   const [loginMethod, setLoginMethod] = useState('email'); // 'email' or 'phone'
   const [step, setStep] = useState('login'); // 'login' or 'otp'
   const [phoneNumber, setPhoneNumber] = useState('');
@@ -159,139 +159,6 @@ function LoginPage() {
     setCountdown(0);
     setApiError('');
     otpForm.reset();
-  };
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-    // Clear error when user starts typing
-    if (errors[name]) {
-      setErrors(prev => ({
-        ...prev,
-        [name]: ''
-      }));
-    }
-  };
-
-  const validateForm = () => {
-    const newErrors = {};
-    
-    if (!formData.email) {
-      newErrors.email = t('emailRequired');
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = t('emailInvalid');
-    }
-    
-    if (!formData.password) {
-      newErrors.password = t('passwordRequired');
-    } else if (formData.password.length < 6) {
-      newErrors.password = t('passwordMinLength');
-    }
-    
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    
-    if (!validateForm()) {
-      return;
-    }
-
-    setIsLoading(true);
-    
-    try {
-      // Try to authenticate with backend API
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: formData.email,
-          password: formData.password,
-        }),
-        credentials: 'include', // Include cookies
-      });
-
-      const data = await response.json();
-
-      if (response.ok && data.success) {
-        // Backend authentication successful
-        const userData = {
-          id: data.user.id,
-          email: data.user.email,
-          name: data.user.name || data.user.email.split('@')[0],
-          role: data.user.role || 'user',
-          balance: data.user.balance || 0
-        };
-        
-        login(userData);
-        navigate('/dashboard');
-      } else {
-        // Backend authentication failed, check if it's a demo user
-        const demoUsers = {
-          'demo@aiservices.com': { password: 'demo123456', name: 'Demo User', role: 'user' },
-          'demoadmin@aiservices.com': { password: 'demoadmin123456', name: 'Demo Admin', role: 'admin' },
-          'admin@aiservices.com': { password: 'admin123456', name: 'System Administrator', role: 'admin' }
-        };
-
-        const demoUser = demoUsers[formData.email];
-        if (demoUser && demoUser.password === formData.password) {
-          // Demo user authentication
-          const userData = {
-            id: 'demo_' + Date.now(),
-            email: formData.email,
-            name: demoUser.name,
-            role: demoUser.role,
-            balance: 1250.75,
-            isDemo: true
-          };
-          
-          login(userData);
-          navigate('/dashboard');
-        } else {
-          setErrors({ submit: data.message || 'Invalid email or password' });
-        }
-      }
-    } catch (error) {
-      console.error('Login error:', error);
-      
-      // Fallback to demo user authentication if backend is not available
-      const demoUsers = {
-        'demo@aiservices.com': { password: 'demo123456', name: 'Demo User', role: 'user' },
-        'demoadmin@aiservices.com': { password: 'demoadmin123456', name: 'Demo Admin', role: 'admin' },
-        'admin@aiservices.com': { password: 'admin123456', name: 'System Administrator', role: 'admin' }
-      };
-
-      const demoUser = demoUsers[formData.email];
-      if (demoUser && demoUser.password === formData.password) {
-        const userData = {
-          id: 'demo_' + Date.now(),
-          email: formData.email,
-          name: demoUser.name,
-          role: demoUser.role,
-          balance: 1250.75,
-          isDemo: true
-        };
-        
-        login(userData);
-        navigate('/dashboard');
-      } else {
-        setErrors({ submit: 'Login failed. Please check your credentials.' });
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleGoogleLogin = () => {
-    // Placeholder for Google OAuth
-    alert('Google login will be implemented soon!');
   };
 
   return (

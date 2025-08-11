@@ -1,5 +1,5 @@
-import axios from 'axios';
-import crypto from 'crypto';
+const axios = require('axios');
+const crypto = require('crypto');
 
 class OTPService {
   constructor() {
@@ -232,4 +232,4 @@ class OTPService {
   }
 }
 
-export default new OTPService();
+module.exports = new OTPService();

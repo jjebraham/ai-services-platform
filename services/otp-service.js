@@ -1,15 +1,16 @@
 const axios = require('axios');
 const crypto = require('crypto');
+const { HttpsProxyAgent } = require('https-proxy-agent');
 
 class OTPService {
   constructor() {
     this.apiKey = process.env.GHASEDAK_API_KEY;
     this.templateName = process.env.GHASEDAK_TEMPLATE_NAME || 'ghasedak2';
-    this.baseURL = 'https://api.ghasedak.me/v2';
+    this.baseURL = 'https://gateway.ghasedak.me/rest/api/v1/WebService';
     this.otpTTL = parseInt(process.env.OTP_TTL_SECONDS) || 300; // 5 minutes
     this.mockMode = process.env.OTP_MOCK === '1';
     this.useProxy = process.env.USE_PROXY === '1';
-    this.proxyFmt = process.env.PROXY_FMT;
+    this.proxyFmt = process.env.PROXY_FMT || process.env.PROXY_URL; // support fixed PROXY_URL
     this.proxyPool = process.env.PROXY_POOL || '1-100';
     this.maxRetry = parseInt(process.env.MAX_RETRY) || 5;
     this.pauseBase = parseFloat(process.env.PAUSE_BASE) || 1.0;
@@ -27,6 +28,10 @@ class OTPService {
 
   // Generate a random 6-digit OTP
   generateOTP() {
+    // In mock mode, always return the test OTP for consistent testing
+    if (this.mockMode) {
+      return '128288';
+    }
     return Math.floor(100000 + Math.random() * 900000).toString();
   }
 
@@ -34,22 +39,30 @@ class OTPService {
   getProxyConfig() {
     if (!this.useProxy || !this.proxyFmt) return null;
     
-    const [min, max] = this.proxyPool.split('-').map(Number);
-    const randomNum = Math.floor(Math.random() * (max - min + 1)) + min;
-    const proxyUrl = this.proxyFmt.replace('{n}', randomNum);
+    let proxyUrl = this.proxyFmt;
+    
+    // Check if it's a pool format with {n} placeholder
+    if (proxyUrl.includes('{n}')) {
+      const [min, max] = this.proxyPool.split('-').map(Number);
+      const randomNum = Math.floor(Math.random() * (max - min + 1)) + min;
+      proxyUrl = proxyUrl.replace('{n}', randomNum);
+    }
     
     try {
       const url = new URL(proxyUrl);
-      return {
+      const proxyConfig = {
         host: url.hostname,
-        port: parseInt(url.port),
+        port: parseInt(url.port) || 80,
         auth: {
           username: url.username,
           password: url.password
-        }
+        },
+        protocol: url.protocol.replace(':','')
       };
+      console.log(`Using proxy: ${url.protocol}//${url.username ? url.username + ':' : ''}***@${url.hostname}:${url.port || 80}`);
+      return { proxyUrl, proxyConfig };
     } catch (error) {
-      console.error('Invalid proxy format:', error);
+      console.error('Invalid proxy format:', error.message);
       return null;
     }
   }
@@ -61,13 +74,21 @@ class OTPService {
       timeout: this.connectTimeout * 1000,
       headers: {
         'Content-Type': 'application/json',
-        'apikey': this.apiKey
+        'ApiKey': this.apiKey
       }
     };
 
-    const proxy = this.getProxyConfig();
-    if (proxy) {
-      config.proxy = proxy;
+    const proxyInfo = this.getProxyConfig();
+    if (proxyInfo) {
+      // Use HTTPS proxy agent for HTTPS target via HTTP proxy
+      try {
+        const agent = new HttpsProxyAgent(proxyInfo.proxyUrl);
+        config.httpsAgent = agent;
+        // Disable strict TLS verification when going through proxy to avoid EPROTO
+        process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+      } catch (e) {
+        console.error('Failed to create HttpsProxyAgent:', e.message);
+      }
     }
 
     return axios.create(config);
@@ -91,18 +112,28 @@ class OTPService {
     try {
       const axiosInstance = this.createAxiosInstance();
       
-      const response = await axiosInstance.post('/verification/send/simple', {
-        receptor: phoneNumber,
-        type: '1', // SMS
-        template: this.templateName,
-        param1: otp
-      });
+      const requestBody = {
+        receptors: [
+          {
+            mobile: phoneNumber,
+            clientReferenceId: 'kiani-' + Date.now()
+          }
+        ],
+        templateName: this.templateName,
+        param1: otp,
+        isVoice: false,
+        udh: false
+      };
 
-      if (response.data && response.data.result) {
+      const response = await axiosInstance.post('/SendOtpWithParams', requestBody);
+
+      if (response.data && response.data.isSuccess) {
+        const item = response.data.data.items[0];
         return {
           success: true,
           message: 'OTP sent successfully',
-          messageId: response.data.result.messageid
+          messageId: item.messageId,
+          cost: item.cost
         };
       } else {
         throw new Error('Invalid response from Ghasedak API');

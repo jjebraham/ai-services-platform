@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { authAPI } from './api';
+import { authAPI } from './services/apiClient';
 
 const AuthContext = createContext();
 
@@ -48,13 +48,15 @@ export const AuthProvider = ({ children }) => {
             if (data.isAuthenticated && data.user) {
               const userData = {
                 id: data.user.id,
-                email: data.user.email,
+                email: data.user.email || data.user.phone,
                 phone: data.user.phone,
                 name: data.user.name || data.user.email?.split('@')[0] || data.user.phone,
+                firstName: data.user.first_name,
+                lastName: data.user.last_name,
                 role: data.user.role || 'user',
                 balance: data.user.balance || 0
               };
-              
+
               localStorage.setItem('user', JSON.stringify(userData));
               setIsAuthenticated(true);
               setUser(userData);
@@ -139,8 +141,18 @@ export const AuthProvider = ({ children }) => {
           setError(response.error || 'Registration failed');
           return { success: false, error: response.error || 'Registration failed' };
         }
+      } else if (userData.phone) {
+        // Phone-based registration
+        const response = await authAPI.register(userData);
+        
+        if (response.success) {
+          return { success: true };
+        } else {
+          setError(response.error || 'Registration failed');
+          return { success: false, error: response.error || 'Registration failed' };
+        }
       } else {
-        const errorMsg = 'Email and password required';
+        const errorMsg = 'Email and password or phone required';
         setError(errorMsg);
         return { success: false, error: errorMsg };
       }

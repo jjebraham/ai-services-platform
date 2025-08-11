@@ -1,5 +1,5 @@
 // API configuration and utilities
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5002/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
 // API client class
 class ApiClient {
@@ -156,10 +156,10 @@ export const authAPI = {
   resendVerification: () => api.post('/auth/resend-verification'),
 
   // Phone authentication
-  sendOTP: (phoneNumber) => api.post('/otp/start', { phone: phoneNumber }),
+  sendOTP: (phoneNumber) => api.post('/auth/send-otp', { phoneNumber }),
   
   // Verify OTP
-  verifyOTP: (phoneNumber, otp) => api.post('/otp/verify', { phone: phoneNumber, otp }),
+  verifyOTP: (phoneNumber, otp) => api.post('/auth/verify-otp', { phoneNumber, otp }),
 };
 
 // KYC API methods

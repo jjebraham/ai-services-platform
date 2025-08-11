@@ -3,6 +3,7 @@ const router = express.Router();
 const authService = require('../services/auth-service');
 const supabaseConfig = require('../supabase-config');
 const otpService = require('../services/otp-service');
+const offlineAuth = process.env.OFFLINE_AUTH === '1' ? require('../offline-auth-service') : null;
 
 // Register route with phone number and OTP verification
 router.post('/register', async (req, res) => {
@@ -238,7 +239,7 @@ router.post('/send-otp', async (req, res) => {
       });
     }
 
-    const result = await otpService.sendOTP(phoneNumber);
+    const result = await otpService.requestOTP(phoneNumber);
 
     if (result.success) {
       res.json({
@@ -281,40 +282,43 @@ router.post('/verify-otp', async (req, res) => {
 
     // OTP is valid, now check if user exists or create new user
     const normalizedPhone = otpService.normalizePhoneNumber(phoneNumber);
-    
+
+    // Choose auth service based on OFFLINE_AUTH flag
+    const svc = offlineAuth || authService;
+
     try {
       // Try to find existing user by phone
-      let user = await authService.findUserByPhone(normalizedPhone);
-      
+      let user = await svc.findUserByPhone(normalizedPhone);
+
       if (!user) {
         // Create new user with phone number
         const userData = {
           phone: normalizedPhone,
-          fullName: `User ${normalizedPhone.slice(-4)}`, // Temporary name
+          fullName: `User ${normalizedPhone.slice(-4)}`,
           isPhoneVerified: true
         };
-        
-        const createResult = await authService.createUserWithPhone(userData);
-        
+
+        const createResult = await svc.createUserWithPhone(userData);
+
         if (!createResult.success) {
           return res.status(400).json(createResult);
         }
-        
+
         user = createResult.user;
       } else {
         // Update phone verification status
-        await authService.updatePhoneVerification(user.id, true);
+        await svc.updatePhoneVerification(user.id, true);
       }
 
       // Generate JWT token
-      const token = authService.generateToken(user.id);
+      const token = svc.generateToken(user.id);
 
       // Set HTTP-only cookie with JWT token
       res.cookie('token', token, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'strict',
-        maxAge: 24 * 60 * 60 * 1000 // 24 hours
+        maxAge: 24 * 60 * 60 * 1000
       });
 
       res.json({
@@ -323,7 +327,7 @@ router.post('/verify-otp', async (req, res) => {
         user: {
           id: user.id,
           phone: user.phone,
-          fullName: user.fullName,
+          fullName: user.full_name || user.fullName || `User ${normalizedPhone.slice(-4)}`,
           isPhoneVerified: true
         }
       });
