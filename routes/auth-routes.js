@@ -1,9 +1,15 @@
-const express = require('express');
+import express from 'express';
 const router = express.Router();
+<<<<<<< HEAD
 const authService = require('../services/auth-service');
 const supabaseConfig = require('../supabase-config');
 const otpService = require('../services/otp-service');
 const offlineAuth = process.env.OFFLINE_AUTH === '1' ? require('../offline-auth-service') : null;
+=======
+import authService from '../services/auth-service.js';
+import supabaseConfig from '../supabase-config.js';
+import otpService from '../services/otp-service.js';
+>>>>>>> 6819f330d6ce66c0500646670624a6511e0ddcc4
 
 // Register route with phone number and OTP verification
 router.post('/register', async (req, res) => {
@@ -282,14 +288,12 @@ router.post('/verify-otp', async (req, res) => {
 
     // OTP is valid, now check if user exists or create new user
     const normalizedPhone = otpService.normalizePhoneNumber(phoneNumber);
-
     // Choose auth service based on OFFLINE_AUTH flag
     const svc = offlineAuth || authService;
 
     try {
       // Try to find existing user by phone
       let user = await svc.findUserByPhone(normalizedPhone);
-
       if (!user) {
         // Create new user with phone number
         const userData = {
@@ -327,7 +331,11 @@ router.post('/verify-otp', async (req, res) => {
         user: {
           id: user.id,
           phone: user.phone,
+<<<<<<< HEAD
           fullName: user.full_name || user.fullName || `User ${normalizedPhone.slice(-4)}`,
+=======
+          fullName: user.fullName,
+>>>>>>> 6819f330d6ce66c0500646670624a6511e0ddcc4
           isPhoneVerified: true
         }
       });
@@ -349,4 +357,8 @@ router.post('/verify-otp', async (req, res) => {
   }
 });
 
+<<<<<<< HEAD
 module.exports = router;
+=======
+export default router;
+>>>>>>> 6819f330d6ce66c0500646670624a6511e0ddcc4

@@ -1,13 +1,18 @@
 const axios = require('axios');
 
 async function testGhasedakAPI() {
+<<<<<<< HEAD
   const apiKey = 'e065bed2072abf1b45ff990251b9e103bf1979332a70c07ecb7afd9807086f1egDGE3wCJddwRUFwY';
+=======
+  const apiKey = 'e065bed2072abf1b45ff990251b9e103bf1979332a70c07ecb7afd9807086f1egDGE3';
+>>>>>>> 6819f330d6ce66c0500646670624a6511e0ddcc4
   const phoneNumber = '09121958296';
   const otp = '123456';
 
   console.log('Testing Ghasedak API with phone:', phoneNumber);
   
   try {
+<<<<<<< HEAD
     // Use form-encoded data format
     const formData = new URLSearchParams();
     formData.append('receptor', phoneNumber);
@@ -19,6 +24,17 @@ async function testGhasedakAPI() {
       headers: {
         'apikey': apiKey,
         'Content-Type': 'application/x-www-form-urlencoded'
+=======
+    const response = await axios.post('https://api.ghasedak.me/v2/verification/send/simple', {
+      receptor: phoneNumber,
+      type: '1',
+      template: 'ghasedak2',
+      param1: otp
+    }, {
+      headers: {
+        'apikey': apiKey,
+        'Content-Type': 'application/json'
+>>>>>>> 6819f330d6ce66c0500646670624a6511e0ddcc4
       },
       timeout: 10000
     });
@@ -44,4 +60,8 @@ async function testGhasedakAPI() {
   }
 }
 
+<<<<<<< HEAD
 testGhasedakAPI();
+=======
+testGhasedakAPI();
+>>>>>>> 6819f330d6ce66c0500646670624a6511e0ddcc4

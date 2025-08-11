@@ -159,7 +159,7 @@ export const authAPI = {
   sendOTP: (phoneNumber) => api.post('/auth/send-otp', { phoneNumber }),
   
   // Verify OTP
-  verifyOTP: (phoneNumber, otp) => api.post('/auth/verify-otp', { phoneNumber, otp }),
+  verifyOTP: (phoneNumber, otp) => api.post('/auth/verify-otp', { phoneNumber, otp })
 };
 
 // KYC API methods
