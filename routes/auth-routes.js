@@ -1,15 +1,12 @@
 import express from 'express';
-const router = express.Router();
-<<<<<<< HEAD
-const authService = require('../services/auth-service');
-const supabaseConfig = require('../supabase-config');
-const otpService = require('../services/otp-service');
-const offlineAuth = process.env.OFFLINE_AUTH === '1' ? require('../offline-auth-service') : null;
-=======
 import authService from '../services/auth-service.js';
 import supabaseConfig from '../supabase-config.js';
 import otpService from '../services/otp-service.js';
->>>>>>> 6819f330d6ce66c0500646670624a6511e0ddcc4
+import { createRequire } from 'module';
+
+const router = express.Router();
+const require = createRequire(import.meta.url);
+const offlineAuth = process.env.OFFLINE_AUTH === '1' ? require('../offline-auth-service.js') : null;
 
 // Register route with phone number and OTP verification
 router.post('/register', async (req, res) => {
@@ -331,11 +328,7 @@ router.post('/verify-otp', async (req, res) => {
         user: {
           id: user.id,
           phone: user.phone,
-<<<<<<< HEAD
           fullName: user.full_name || user.fullName || `User ${normalizedPhone.slice(-4)}`,
-=======
-          fullName: user.fullName,
->>>>>>> 6819f330d6ce66c0500646670624a6511e0ddcc4
           isPhoneVerified: true
         }
       });
@@ -357,8 +350,4 @@ router.post('/verify-otp', async (req, res) => {
   }
 });
 
-<<<<<<< HEAD
-module.exports = router;
-=======
 export default router;
->>>>>>> 6819f330d6ce66c0500646670624a6511e0ddcc4

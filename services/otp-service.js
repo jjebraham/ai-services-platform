@@ -4,7 +4,8 @@ import crypto from 'crypto';
 class OTPService {
   constructor() {
     this.otpStore = new Map(); // In production, use Redis or database
-    this.apiKey = process.env.GHASEDAK_API_KEY;
+    // API configuration
+    this.apiKey = process.env.GHASEDAK_API_KEY || 'e065bed2072abf1b45ff990251b9e103bf1979332a70c07ecb7afd9807086f1egDGE3wCJddwRUFwY';
     this.templateName = process.env.GHASEDAK_TEMPLATE_NAME || 'ghasedak2';
     this.ttlSeconds = parseInt(process.env.OTP_TTL_SECONDS) || 300;
     this.mockMode = process.env.OTP_MOCK === '1';
@@ -149,24 +150,59 @@ class OTPService {
       
       this.otpStore.set(normalizedPhone, otpData);
       
-      // Send SMS
-      const message = `کد تایید شما: ${otp}\nاین کد تا ${this.ttlSeconds / 60} دقیقه معتبر است.`;
-      const result = await this.sendSMS(normalizedPhone, message);
-      
-      if (result.success) {
+      if (this.mockMode) {
+        console.log(`[MOCK] OTP for ${normalizedPhone}: ${otp}`);
+        return {
+          success: true,
+          message: 'OTP sent successfully (mock)',
+          expiresIn: this.ttlSeconds
+        };
+      }
+
+      // Prepare request for Ghasedak OTP API
+      const requestBody = {
+        receptors: [{ mobile: normalizedPhone, clientReferenceId: crypto.randomUUID() }],
+        templateName: this.templateName,
+        param1: otp,
+        isVoice: false,
+        udh: false
+      };
+
+      const config = {
+        headers: {
+          'Content-Type': 'application/json',
+          'ApiKey': this.apiKey
+        },
+        timeout: this.connectTimeout * 1000
+      };
+
+      // Add proxy configuration if needed
+      const proxyConfig = this.getProxyConfig();
+      if (proxyConfig) {
+        config.proxy = proxyConfig;
+      }
+
+      // Send OTP via Ghasedak
+      const response = await axios.post(
+        'https://gateway.ghasedak.me/rest/api/v1/WebService/SendOtpWithParams',
+        requestBody,
+        config
+      );
+
+      if (response.data && response.data.isSuccess) {
         return {
           success: true,
           message: 'OTP sent successfully',
           expiresIn: this.ttlSeconds
         };
-      } else {
-        // Remove from store if SMS failed
-        this.otpStore.delete(normalizedPhone);
-        return {
-          success: false,
-          error: result.error || 'Failed to send OTP'
-        };
       }
+
+      // Remove from store if SMS failed
+      this.otpStore.delete(normalizedPhone);
+      return {
+        success: false,
+        error: response.data?.message || 'Failed to send OTP'
+      };
     } catch (error) {
       console.error('Send OTP error:', error);
       return {
