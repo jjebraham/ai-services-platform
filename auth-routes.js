@@ -1,15 +1,8 @@
-<<<<<<< HEAD
 import express from 'express';
 const router = express.Router();
-import authService from '../services/auth-service.js';
-import supabaseConfig from '../supabase-config.js';
-import otpService from '../services/otp-service.js';
-=======
-const express = require('express');
-const router = express.Router();
-const authService = require('../services/auth-service');
-const supabaseConfig = require('../supabase-config');
->>>>>>> 6819f330d6ce66c0500646670624a6511e0ddcc4
+import authService from './services/auth-service.js';
+import supabaseConfig from './supabase-config.js';
+import otpService from './services/otp-service.js';
 
 // Register route
 router.post('/register', async (req, res) => {
@@ -192,7 +185,6 @@ router.get('/status', async (req, res) => {
   }
 });
 
-<<<<<<< HEAD
 // Phone authentication routes
 
 // Send OTP to phone number
@@ -325,6 +317,3 @@ router.post('/verify-otp', async (req, res) => {
 });
 
 export default router;
-=======
-module.exports = router;
->>>>>>> 6819f330d6ce66c0500646670624a6511e0ddcc4
