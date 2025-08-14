@@ -19,7 +19,11 @@ function Navigation() {
     <nav className="navbar">
       <div className="nav-container" dir="ltr">
         <Link to="/" className="nav-brand">
-          {t('siteName')}
+          <img
+            src={theme === 'dark' ? '/kiani-exchange-logo-white.svg' : '/kiani-exchange-logo-gray.svg'}
+            alt={t('siteName')}
+            className="h-8"
+          />
         </Link>
 
         <div className="nav-links">
