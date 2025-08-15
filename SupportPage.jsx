@@ -19,9 +19,9 @@ import {
   FileText,
   Send
 } from 'lucide-react';
-import { api } from '../lib/api';
-import { useAuth } from '../contexts/AuthContext';
-import LoadingSpinner from '../components/LoadingSpinner';
+import api from './services/apiClient';
+import { useAuth } from './AuthContext';
+import LoadingSpinner from './LoadingSpinner';
 
 const ticketSchema = z.object({
   title: z.string().min(5, 'Title must be at least 5 characters').max(100, 'Title must be less than 100 characters'),

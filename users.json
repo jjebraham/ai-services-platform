@@ -1,0 +1,24 @@
+[
+  {
+    "id": "1754707314830nsi9gd1dc",
+    "email": "09121958296@phone.local",
+    "full_name": "amir kiani",
+    "password_hash": "$2b$12$FoVAv0zLBTmLbbba.SmXJe.DU9fMVFcZyJiLi9yx6CF07bDjYRYEG",
+    "created_at": "2025-08-09T02:41:54.830Z",
+    "updated_at": "2025-08-09T02:41:54.830Z",
+    "is_active": true,
+    "role": "user",
+    "last_login": "2025-08-09T02:42:58.146Z"
+  },
+  {
+    "id": "17547078510275kjdrss46",
+    "email": "09354069420@phone.local",
+    "full_name": "Amir Kiani",
+    "password_hash": "$2b$12$1rrpkeDh3qaK27VhbWgiAOVJtYS3ZfVCWbhPeCdEZAHw0.IMCFQpm",
+    "created_at": "2025-08-09T02:50:51.027Z",
+    "updated_at": "2025-08-09T02:50:51.027Z",
+    "is_active": true,
+    "role": "user",
+    "last_login": null
+  }
+]

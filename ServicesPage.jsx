@@ -46,7 +46,7 @@ function ServicesPage() {
         pros: service.pros[lang] || service.pros.en || service.pros || [],
         bestFor: service.bestFor[lang] || service.bestFor.en || service.bestFor || '',
         provider: service.provider[lang] || service.provider.en || service.provider,
-        responseTime: service.responseTime[lang] || service.responseTime.en || service.responseTime,
+
         image: service.icon
       }));
       
@@ -69,7 +69,7 @@ function ServicesPage() {
         pros: service.pros[lang] || service.pros.en || service.pros || [],
         bestFor: service.bestFor[lang] || service.bestFor.en || service.bestFor || '',
         provider: service.provider[lang] || service.provider.en || service.provider,
-        responseTime: service.responseTime[lang] || service.responseTime.en || service.responseTime,
+
         image: service.icon
       }));
       setServices(transformedServices);

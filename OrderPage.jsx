@@ -17,9 +17,9 @@ import {
   Star,
   Info
 } from 'lucide-react';
-import { api } from '../lib/api';
-import { useAuth } from '../contexts/AuthContext';
-import LoadingSpinner from '../components/LoadingSpinner';
+import { ordersAPI } from './services/apiClient';
+import { useAuth } from './AuthContext';
+import LoadingSpinner from './LoadingSpinner';
 
 const orderSchema = z.object({
   quantity: z.number().min(1, 'Quantity must be at least 1').max(1000, 'Maximum quantity is 1000'),

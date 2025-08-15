@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Services Platform</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+    <div id="root">
+        <div class="min-h-screen bg-gray-50 flex items-center justify-center">
+            <div class="text-center">
+                <h1 class="text-4xl font-bold text-gray-900 mb-4">AI Services Platform</h1>
+                <p class="text-lg text-gray-600 mb-8">Access Premium AI Tools</p>
+                <div class="space-x-4">
+                    <button id="getStartedBtn" class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors duration-200">Get Started</button>
+                    <button id="learnMoreBtn" class="border border-gray-300 text-gray-700 px-6 py-3 rounded-lg hover:bg-gray-50 transition-colors duration-200">Learn More</button>
+                </div>
+                <div id="statusMessage" class="mt-8 hidden">
+                    <p class="text-sm text-green-600">✅ Button clicked successfully!</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for Get Started -->
+    <div id="getStartedModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg p-8 max-w-md w-full mx-4">
+            <h2 class="text-2xl font-bold text-gray-900 mb-4">Welcome to AI Services!</h2>
+            <p class="text-gray-600 mb-6">Choose how you'd like to get started with our AI platform:</p>
+            <div class="space-y-3">
+                <button class="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 transition-colors">Create Account</button>
+                <button class="w-full border border-gray-300 text-gray-700 py-3 px-4 rounded-lg hover:bg-gray-50 transition-colors">Try Demo</button>
+                <button class="w-full bg-green-600 text-white py-3 px-4 rounded-lg hover:bg-green-700 transition-colors">View Services</button>
+            </div>
+            <button id="closeModal" class="mt-4 w-full text-gray-500 hover:text-gray-700">Close</button>
+        </div>
+    </div>
+
+    <!-- Modal for Learn More -->
+    <div id="learnMoreModal" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center z-50">
+        <div class="bg-white rounded-lg p-8 max-w-lg w-full mx-4">
+            <h2 class="text-2xl font-bold text-gray-900 mb-4">About AI Services Platform</h2>
+            <div class="text-gray-600 space-y-4">
+                <p>Our AI Services Platform provides cutting-edge artificial intelligence tools and services to help businesses and individuals leverage the power of AI.</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+                    <div class="bg-blue-50 p-4 rounded-lg">
+                        <h3 class="font-semibold text-blue-900">AI Analytics</h3>
+                        <p class="text-sm text-blue-700">Advanced data analysis and insights</p>
+                    </div>
+                    <div class="bg-green-50 p-4 rounded-lg">
+                        <h3 class="font-semibold text-green-900">Machine Learning</h3>
+                        <p class="text-sm text-green-700">Custom ML models and training</p>
+                    </div>
+                    <div class="bg-purple-50 p-4 rounded-lg">
+                        <h3 class="font-semibold text-purple-900">Natural Language</h3>
+                        <p class="text-sm text-purple-700">Text processing and understanding</p>
+                    </div>
+                    <div class="bg-orange-50 p-4 rounded-lg">
+                        <h3 class="font-semibold text-orange-900">Computer Vision</h3>
+                        <p class="text-sm text-orange-700">Image and video analysis</p>
+                    </div>
+                </div>
+            </div>
+            <button id="closeLearnMoreModal" class="mt-6 w-full bg-gray-600 text-white py-3 px-4 rounded-lg hover:bg-gray-700 transition-colors">Close</button>
+        </div>
+    </div>
+
+    <script>
+        // Get Started Button Functionality
+        document.getElementById('getStartedBtn').addEventListener('click', function() {
+            console.log('Get Started button clicked');
+            document.getElementById('getStartedModal').classList.remove('hidden');
+            
+            // Show status message
+            const statusMessage = document.getElementById('statusMessage');
+            statusMessage.classList.remove('hidden');
+            setTimeout(() => {
+                statusMessage.classList.add('hidden');
+            }, 3000);
+        });
+
+        // Learn More Button Functionality
+        document.getElementById('learnMoreBtn').addEventListener('click', function() {
+            console.log('Learn More button clicked');
+            document.getElementById('learnMoreModal').classList.remove('hidden');
+        });
+
+        // Close Modal Functionality
+        document.getElementById('closeModal').addEventListener('click', function() {
+            document.getElementById('getStartedModal').classList.add('hidden');
+        });
+
+        document.getElementById('closeLearnMoreModal').addEventListener('click', function() {
+            document.getElementById('learnMoreModal').classList.add('hidden');
+        });
+
+        // Close modals when clicking outside
+        document.getElementById('getStartedModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                this.classList.add('hidden');
+            }
+        });
+
+        document.getElementById('learnMoreModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                this.classList.add('hidden');
+            }
+        });
+
+        // Test API connectivity
+        fetch('/api/health')
+            .then(response => response.json())
+            .then(data => {
+                console.log('API Health:', data);
+            })
+            .catch(error => {
+                console.error('API Error:', error);
+            });
+
+        // Add some interactive effects
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('AI Services Platform loaded successfully');
+            
+            // Add click effects to all buttons
+            const buttons = document.querySelectorAll('button');
+            buttons.forEach(button => {
+                button.addEventListener('click', function() {
+                    this.style.transform = 'scale(0.95)';
+                    setTimeout(() => {
+                        this.style.transform = 'scale(1)';
+                    }, 150);
+                });
+            });
+        });
+    </script>
+</body>
+</html>

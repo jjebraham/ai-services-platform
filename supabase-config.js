@@ -1,5 +1,5 @@
 // Supabase Configuration
-const { createClient } = require('@supabase/supabase-js');
+import { createClient } from '@supabase/supabase-js';
 
 class SupabaseConfig {
   constructor() {
@@ -135,4 +135,4 @@ class SupabaseConfig {
   }
 }
 
-module.exports = new SupabaseConfig();
+export default new SupabaseConfig();
