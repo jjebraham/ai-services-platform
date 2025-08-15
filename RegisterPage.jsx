@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import { useLanguage } from './LanguageContext';
@@ -130,18 +130,80 @@ function RegisterPage() {
     }
   };
 
-  const handleGoogleSignup = () => {
-    // Mock Google signup
-    const userData = {
-      id: Date.now(),
-      firstName: 'Google',
-      lastName: 'User',
-      email: 'user@gmail.com',
-      balance: 0
-    };
-    login(userData);
-    navigate('/dashboard');
+  const handleGoogleSignup = async (credentialResponse) => {
+    try {
+      setIsLoading(true);
+      setErrors({});
+
+      const response = await fetch('/api/auth/google', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          credential: credentialResponse.credential
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Store user data and redirect
+        login(data.user);
+        navigate('/dashboard');
+      } else {
+        setErrors({ submit: data.error || 'Google signup failed' });
+      }
+    } catch (error) {
+      console.error('Google signup error:', error);
+      setErrors({ submit: 'Google signup failed. Please try again.' });
+    } finally {
+      setIsLoading(false);
+    }
   };
+
+  const handleGoogleError = () => {
+    setErrors({ submit: 'Google signup was cancelled or failed' });
+  };
+
+  useEffect(() => {
+    // Load Google Identity Services script
+    const script = document.createElement('script');
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.async = true;
+    script.defer = true;
+    script.onload = () => {
+      // Initialize Google Sign-In
+      if (window.google) {
+        window.google.accounts.id.initialize({
+          client_id: process.env.REACT_APP_GOOGLE_CLIENT_ID || '1234567890-abcdefghijklmnopqrstuvwxyz.apps.googleusercontent.com',
+          callback: handleGoogleSignup,
+          auto_select: false,
+          cancel_on_tap_outside: true
+        });
+
+        // Render the Google Sign-In button
+        window.google.accounts.id.renderButton(
+          document.getElementById('google-signup-button'),
+          {
+            theme: 'outline',
+            size: 'large',
+            width: '100%',
+            text: 'signup_with',
+            shape: 'rectangular'
+          }
+        );
+      }
+    };
+    document.head.appendChild(script);
+
+    // Cleanup
+    return () => {
+      if (document.head.contains(script)) {
+        document.head.removeChild(script);
+      }
+    };
+  }, []);
 
   return (
     <div className="register-page">
@@ -378,14 +440,7 @@ function RegisterPage() {
         </div>
 
         {/* Google Signup */}
-        <button
-          type="button"
-          className="google-button"
-          onClick={handleGoogleSignup}
-        >
-          <span className="google-icon">🔍</span>
-          {t('continueWithGoogle')}
-        </button>
+        <div id="google-signup-button" className="google-button-container"></div>
 
         {/* Sign In Link */}
         <div className="register-links">

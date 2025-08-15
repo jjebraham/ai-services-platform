@@ -252,6 +252,135 @@ class AuthService {
     }
   }
 
+  // Google OAuth login
+  async googleLogin(googleData) {
+    const { googleId, email, fullName, picture } = googleData;
+
+    try {
+      if (!supabaseConfig.isConfigured()) {
+        return { 
+          success: false, 
+          error: 'Database not configured. Please contact administrator.' 
+        };
+      }
+
+      const supabase = supabaseConfig.getClient();
+      const adminSupabase = supabaseConfig.getAdminClient();
+
+      if (!supabase) {
+        return { 
+          success: false, 
+          error: 'Database connection not available. Please contact administrator.' 
+        };
+      }
+
+      // Check if user already exists
+      const { data: existingUser, error: userError } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('email', email)
+        .eq('is_active', true)
+        .single();
+
+      let user;
+
+      if (existingUser) {
+        // Update existing user with Google ID if not set
+        if (!existingUser.google_id) {
+          const { data: updatedUser, error: updateError } = await supabase
+            .from('user_profiles')
+            .update({
+              google_id: googleId,
+              profile_picture: picture,
+              last_login: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', existingUser.id)
+            .select()
+            .single();
+
+          if (updateError) {
+            return { success: false, error: updateError.message };
+          }
+          user = updatedUser;
+        } else {
+          // Just update last login
+          const { data: updatedUser, error: updateError } = await supabase
+            .from('user_profiles')
+            .update({
+              last_login: new Date().toISOString(),
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', existingUser.id)
+            .select()
+            .single();
+
+          if (updateError) {
+            return { success: false, error: updateError.message };
+          }
+          user = updatedUser;
+        }
+      } else {
+        // Create new user
+        const userId = `google_${googleId}_${Date.now()}`;
+
+        // Create user profile
+        const { data: newUser, error: createError } = await supabase
+          .from('user_profiles')
+          .insert([
+            {
+              id: userId,
+              email,
+              full_name: fullName,
+              google_id: googleId,
+              profile_picture: picture,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+              last_login: new Date().toISOString(),
+              is_active: true,
+              role: 'user',
+              password_hash: null // No password for Google OAuth users
+            }
+          ])
+          .select()
+          .single();
+
+        if (createError) {
+          return { success: false, error: createError.message };
+        }
+        user = newUser;
+      }
+
+      // Generate JWT token
+      const token = jwt.sign(
+        { 
+          userId: user.id, 
+          email: user.email,
+          role: user.role 
+        },
+        process.env.JWT_SECRET || 'your-jwt-secret',
+        { expiresIn: '24h' }
+      );
+
+      return {
+        success: true,
+        message: existingUser ? 'Login successful' : 'Account created and logged in successfully',
+        token,
+        user: {
+          id: user.id,
+          email: user.email,
+          fullName: user.full_name,
+          role: user.role,
+          profilePicture: user.profile_picture
+        }
+      };
+
+    } catch (error) {
+      console.error('Google login error:', error);
+      return { success: false, error: 'Google authentication failed. Please try again.' };
+    }
+  }
+
   // Logout user
   async logout() {
     try {

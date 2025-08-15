@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import { useLanguage } from './LanguageContext';
@@ -143,10 +143,80 @@ function LoginPage() {
     }
   };
 
-  const handleGoogleLogin = () => {
-    // Placeholder for Google OAuth
-    alert('Google login will be implemented soon!');
+  const handleGoogleLogin = async (credentialResponse) => {
+    try {
+      setLoading(true);
+      setErrors({});
+
+      const response = await fetch('/api/auth/google', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          credential: credentialResponse.credential
+        })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        // Store user data and redirect
+        login(data.user);
+        navigate('/dashboard');
+      } else {
+        setErrors({ submit: data.error || 'Google login failed' });
+      }
+    } catch (error) {
+      console.error('Google login error:', error);
+      setErrors({ submit: 'Google login failed. Please try again.' });
+    } finally {
+      setLoading(false);
+    }
   };
+
+  const handleGoogleError = () => {
+    setErrors({ submit: 'Google login was cancelled or failed' });
+  };
+
+  useEffect(() => {
+    // Load Google Identity Services script
+    const script = document.createElement('script');
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.async = true;
+    script.defer = true;
+    script.onload = () => {
+      // Initialize Google Sign-In
+      if (window.google) {
+        window.google.accounts.id.initialize({
+          client_id: process.env.REACT_APP_GOOGLE_CLIENT_ID || '1234567890-abcdefghijklmnopqrstuvwxyz.apps.googleusercontent.com',
+          callback: handleGoogleLogin,
+          auto_select: false,
+          cancel_on_tap_outside: true
+        });
+
+        // Render the Google Sign-In button
+        window.google.accounts.id.renderButton(
+          document.getElementById('google-signin-button'),
+          {
+            theme: 'outline',
+            size: 'large',
+            width: '100%',
+            text: 'signin_with',
+            shape: 'rectangular'
+          }
+        );
+      }
+    };
+    document.head.appendChild(script);
+
+    // Cleanup
+    return () => {
+      if (document.head.contains(script)) {
+        document.head.removeChild(script);
+      }
+    };
+  }, []);
 
   return (
     <div className="login-page">
@@ -232,6 +302,12 @@ function LoginPage() {
               )}
             </button>
           </form>
+
+          <div className="divider">
+            <span>{t('orContinueWith')}</span>
+          </div>
+
+          <div id="google-signin-button" className="w-full flex justify-center"></div>
 
           <div className="login-footer">
             <p className="signup-prompt">

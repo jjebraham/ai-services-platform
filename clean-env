@@ -1,0 +1,29 @@
+# Server configuration
+NODE_ENV=production
+PORT=3000
+SESSION_SECRET=your-session-secret-change-in-production
+ADMIN_EMAIL=admin@kiani.exchange
+ADMIN_PASSWORD=admin123
+NODE_TLS_REJECT_UNAUTHORIZED=0
+NODE_OPTIONS=--tls-min-v1.2
+
+# Database
+MONGODB_URI=mongodb://localhost:27017/ai-services-platform
+
+# Ghasedak SMS API Configuration
+GHASEDAK_API_KEY=e065bed2072abf1b45ff990251b9e103bf1979332a70c07ecb7afd9807086f1egDGE3wCJddwRUFwY
+GHASEDAK_TEMPLATE_NAME=ghasedak2
+
+# OTP Configuration
+OTP_TTL_SECONDS=300
+OTP_MOCK=0
+
+# Proxy Configuration (Required for Ghasedak API access)
+USE_PROXY=1
+PROXY_URL=http://jjebraham-12:Amir1234@p.webshare.io:80
+
+# Retry Configuration
+MAX_RETRY=3
+PAUSE_BASE=1.0
+CONNECT_TIMEOUT=30
+READ_TIMEOUT=30

@@ -1,0 +1,12 @@
+{
+  "receptors": [
+    {
+      "mobile": "09121958296",
+      "clientReferenceId": "1"
+    }
+  ],
+  "templateName": "ghasedak2",
+  "param1": "1234",
+  "isVoice": false,
+  "udh": false
+}

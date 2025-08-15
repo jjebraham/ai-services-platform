@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CSP Test</title>
+</head>
+<body>
+  <h1>Content Security Policy Test</h1>
+  <div id="result"></div>
+  
+  <script>
+    // This inline script should be blocked by CSP if 'unsafe-inline' is not allowed
+    document.getElementById('result').textContent = 'Inline script executed successfully!';
+  </script>
+</body>
+</html>

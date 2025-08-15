@@ -2,6 +2,15 @@ const express = require('express');
 const router = express.Router();
 const authService = require('../services/auth-service');
 const supabaseConfig = require('../supabase-config');
+const passport = require('passport');
+const { OAuth2Client } = require('google-auth-library');
+
+// Initialize Google OAuth client
+const googleClient = new OAuth2Client(
+  process.env.GOOGLE_CLIENT_ID,
+  process.env.GOOGLE_CLIENT_SECRET,
+  process.env.GOOGLE_REDIRECT_URI || 'http://localhost:3000/auth/google/callback'
+);
 
 // Register route
 router.post('/register', async (req, res) => {
@@ -158,6 +167,68 @@ router.put('/profile', async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Internal server error'
+    });
+  }
+});
+
+// Google OAuth login route
+router.post('/google', async (req, res) => {
+  try {
+    const { credential } = req.body;
+
+    if (!credential) {
+      return res.status(400).json({
+        success: false,
+        error: 'Google credential is required'
+      });
+    }
+
+    // Verify the Google token
+    const ticket = await googleClient.verifyIdToken({
+      idToken: credential,
+      audience: process.env.GOOGLE_CLIENT_ID
+    });
+
+    const payload = ticket.getPayload();
+    const { sub: googleId, email, name, picture } = payload;
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        error: 'Email not provided by Google'
+      });
+    }
+
+    const result = await authService.googleLogin({
+      googleId,
+      email,
+      fullName: name,
+      picture
+    });
+
+    if (result.success) {
+      // Set HTTP-only cookie with JWT token
+      res.cookie('token', result.token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 24 * 60 * 60 * 1000 // 24 hours
+      });
+
+      res.json({
+        success: true,
+        message: result.message,
+        user: result.user
+      });
+    } else {
+      res.status(400).json(result);
+    }
+
+  } catch (error) {
+    console.error('Google OAuth error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Google authentication failed'
     });
   }
 });
