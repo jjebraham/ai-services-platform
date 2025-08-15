@@ -1,9 +1,9 @@
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const authService = require('../services/auth-service');
-const supabaseConfig = require('../supabase-config');
-const passport = require('passport');
-const { OAuth2Client } = require('google-auth-library');
+import authService from '../services/auth-service.js';
+import supabaseConfig from '../supabase-config.js';
+import passport from 'passport';
+import { OAuth2Client } from 'google-auth-library';
 
 // Initialize Google OAuth client
 const googleClient = new OAuth2Client(
