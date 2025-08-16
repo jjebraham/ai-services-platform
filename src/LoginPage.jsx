@@ -131,34 +131,58 @@ function LoginPage() {
   };
 
   useEffect(() => {
+    console.log('🔄 Loading Google Identity Services script...');
+    
     // Load Google Identity Services script
     const script = document.createElement('script');
     script.src = 'https://accounts.google.com/gsi/client';
     script.async = true;
     script.defer = true;
     script.onload = () => {
+      console.log('✅ Google script loaded successfully');
+      
       // Initialize Google Sign-In
       if (window.google) {
-        window.google.accounts.id.initialize({
-          client_id: '75748031610-mie84kot707nol668ba2c5fu3h9o33ij.apps.googleusercontent.com',
-          callback: handleGoogleLogin,
-          auto_select: false,
-          cancel_on_tap_outside: true
-        });
+        console.log('🔐 Initializing Google Sign-In...');
+        
+        try {
+          window.google.accounts.id.initialize({
+            client_id: '75748031610-mie84kot707nol668ba2c5fu3h9o33ij.apps.googleusercontent.com',
+            callback: handleGoogleLogin,
+            auto_select: false,
+            cancel_on_tap_outside: true
+          });
+          
+          console.log('✅ Google Sign-In initialized');
 
-        // Render the Google Sign-In button
-        window.google.accounts.id.renderButton(
-          document.getElementById('google-signin-button'),
-          {
-            theme: 'outline',
-            size: 'large',
-            width: '100%',
-            text: 'signin_with',
-            shape: 'rectangular'
+          // Render the Google Sign-In button
+          const buttonElement = document.getElementById('google-signin-button');
+          console.log('🎯 Button element found:', buttonElement);
+          
+          if (buttonElement) {
+            window.google.accounts.id.renderButton(buttonElement, {
+              theme: 'outline',
+              size: 'large',
+              width: '100%',
+              text: 'signin_with',
+              shape: 'rectangular'
+            });
+            console.log('✅ Google button rendered');
+          } else {
+            console.error('❌ Button element not found!');
           }
-        );
+        } catch (error) {
+          console.error('💥 Error initializing Google Sign-In:', error);
+        }
+      } else {
+        console.error('❌ Google object not available');
       }
     };
+    
+    script.onerror = () => {
+      console.error('❌ Failed to load Google script');
+    };
+    
     document.head.appendChild(script);
 
     // Cleanup
