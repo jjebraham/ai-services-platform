@@ -89,7 +89,7 @@ body.light-theme .service-price {
 }
 
 body.dark-theme {
-  background-color: #333333;
+  background-color: #000123;
   color: #ffffff;
 }
 
@@ -193,7 +193,7 @@ body.rtl .nav-links {
 }
 
 body.dark-theme .navigation {
-  background: #333333;
+  background: #000123;
   box-shadow: 0 1px 3px 0 rgba(255, 255, 255, 0.1);
 }
 
@@ -214,6 +214,33 @@ body.dark-theme .nav-link:hover {
   cursor: pointer;
   transition: all 0.2s;
   border: none;
+}
+
+/* Auth buttons styling */
+.auth-button {
+  border: 2px solid #fbbf24 !important; /* Yellow border */
+  background: #fbbf24 !important; /* Yellow background */
+  color: #000123 !important; /* Dark text */
+  font-weight: 700;
+}
+
+.auth-button:hover {
+  background: #f59e0b !important; /* Darker yellow on hover */
+  border-color: #f59e0b !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(251, 191, 36, 0.3);
+}
+
+/* Dark mode auth buttons */
+body.dark-theme .auth-button {
+  background: #fbbf24 !important;
+  color: #000123 !important;
+  border-color: #fbbf24 !important;
+}
+
+body.dark-theme .auth-button:hover {
+  background: #f59e0b !important;
+  border-color: #f59e0b !important;
 }
 
 /* Button Styles */
@@ -294,7 +321,7 @@ body.dark-theme .nav-link:hover {
 /* Dashboard Styles */
 .dashboard {
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #000123;
   padding: 2rem;
 }
 
@@ -308,7 +335,7 @@ body.dark-theme .nav-link:hover {
 }
 
 .dashboard-header {
-  background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+  background: #000123;
   color: white;
   padding: 2rem;
   text-align: center;
@@ -330,7 +357,7 @@ body.dark-theme .nav-link:hover {
 }
 
 .balance-section {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  background: #000123;
   color: white;
   padding: 2rem;
   border-radius: 12px;
@@ -422,7 +449,7 @@ body.dark-theme .nav-link:hover {
 }
 
 .hero-section {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #000123;
   color: white;
   padding: 4rem 2rem;
   text-align: center;
@@ -663,7 +690,7 @@ body.dark-theme .nav-link:hover {
 }
 
 .cta-section {
-  background: linear-gradient(135deg, #1f2937 0%, #374151 100%);
+  background: #000123;
   color: white;
   padding: 4rem 2rem;
   text-align: center;
@@ -709,7 +736,7 @@ body.dark-theme .nav-link:hover {
 /* LoginPage Styles */
 .login-page {
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #000123;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1400,7 +1427,7 @@ body.dark-theme .nav-link:hover {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #000123;
   padding: 2rem;
 }
 
@@ -1831,7 +1858,7 @@ body.dark-theme .nav-link:hover {
 }
 
 .order-button {
-  background: linear-gradient(135deg, #4f46e5, #6366f1);
+  background: #000123;
   color: #fff;
   padding: 0.5rem 1rem;
   border: none;
@@ -1845,7 +1872,7 @@ body.dark-theme .nav-link:hover {
 }
 
 .order-button:hover {
-  background: linear-gradient(135deg, #4338ca, #4f46e5);
+  background: #000123;
   transform: translateY(-2px);
 }
 
@@ -2161,7 +2188,7 @@ html, body {
 /* Admin Dashboard Styles */
 .admin-dashboard {
   min-height: 100vh;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #000123;
   padding: 2rem;
 }
 
@@ -2175,7 +2202,7 @@ html, body {
 }
 
 .admin-header {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #000123;
   color: white;
   padding: 2rem;
   position: relative;
@@ -2371,9 +2398,9 @@ html, body {
 }
 
 .action-btn:hover {
-  border-color: #667eea;
+  border-color: #000123;
   transform: translateY(-3px);
-  box-shadow: 0 10px 25px rgba(102, 126, 234, 0.15);
+  box-shadow: 0 10px 25px rgba(0, 1, 35, 0.15);
 }
 
 .btn-icon {
@@ -2411,7 +2438,7 @@ html, body {
   justify-content: space-between;
   align-items: center;
   padding: 1.5rem 2rem;
-  background: #667eea;
+  background: #000123;
   color: white;
 }
 
@@ -2464,7 +2491,7 @@ html, body {
 .order-number {
   font-family: 'Courier New', monospace;
   font-weight: 600;
-  color: #667eea;
+  color: #000123;
 }
 
 .amount {
@@ -3414,7 +3441,7 @@ html, body {
   width: 80px;
   height: 80px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #000123;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -3814,7 +3841,7 @@ footer {
 }
 
 body.dark-theme footer {
-  background-color: #2d3748;
+  background-color: #000123;
   border-top-color: #4a5568;
   color: #ffffff;
 }

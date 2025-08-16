@@ -2,10 +2,12 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { Zap, Mail } from 'lucide-react';
 import { useLanguage } from './LanguageContext';
+import { useTheme } from './ThemeContext';
 
 function Footer() {
   const currentYear = new Date().getFullYear();
   const { toggleLanguage, lang } = useLanguage();
+  const { theme } = useTheme();
 
   return (
     <footer className="bg-muted/50 border-t">
@@ -15,7 +17,7 @@ function Footer() {
           <div className="space-y-4">
             <Link to="/" className="flex items-center space-x-2">
               <img
-                src="/kiani-exchange-logo-gray.svg"
+                src={theme === 'dark' ? '/kiani-exchange-logo-white.svg' : '/kiani-exchange-logo-gray.svg'}
                 alt="KIANI.EXCHANGE"
                 className="h-2"
               />
@@ -149,7 +151,7 @@ function Footer() {
                 onClick={toggleLanguage}
                 className="nav-button lang-button"
               >
-                {lang === 'en' ? 'فارسی' : 'English'}
+                {lang === 'fa' ? 'فارسی' : 'English'}
               </button>
             </div>
           </div>

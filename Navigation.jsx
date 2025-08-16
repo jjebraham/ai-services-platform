@@ -49,10 +49,10 @@ function Navigation() {
               </>
             ) : (
               <>
-                <Link to="/login" className="nav-button login">
+                <Link to="/login" className="nav-button auth-button login-button">
                   {t('login')}
                 </Link>
-                <Link to="/register" className="nav-button register">
+                <Link to="/register" className="nav-button auth-button register-button">
                   {t('signup')}
                 </Link>
               </>
@@ -62,8 +62,8 @@ function Navigation() {
           {/* Control buttons - always at the end */}
           <div className="control-buttons">
             <button onClick={toggleLanguage} className="nav-button lang-button">
-              {lang === 'en' ? (<span role="img" aria-label="Persian flag">🇮🇷</span>) : (<span role="img" aria-label="US flag">🇺🇸</span>)}
-              {lang === 'en' ? ' Persian' : ' English'}
+              {lang === 'fa' ? (<span role="img" aria-label="Persian flag">🇮🇷</span>) : (<span role="img" aria-label="US flag">🇺🇸</span>)}
+              {lang === 'fa' ? ' فارسی' : ' English'}
             </button>
             <button onClick={toggleTheme} className="nav-button theme-button" aria-label="Toggle theme">
               {theme === 'light' ? (
