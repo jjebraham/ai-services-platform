@@ -150,18 +150,7 @@ class AuthService {
         };
       }
 
-      // Sign in with Supabase Auth
-      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
-
-      if (authError) {
-        console.error('Login error:', authError);
-        return { success: false, error: 'Invalid email or password' };
-      }
-
-      // Get user profile
+      // Get user profile directly from our table
       const { data: profile, error: profileError } = await supabase
         .from('user_profiles')
         .select('*')
@@ -170,8 +159,29 @@ class AuthService {
 
       if (profileError || !profile) {
         console.error('Profile fetch error:', profileError);
-        return { success: false, error: 'User profile not found' };
+        return { success: false, error: 'Invalid email or password' };
       }
+
+      // Check if user is active
+      if (!profile.is_active) {
+        return { success: false, error: 'Account is deactivated' };
+      }
+
+      // Verify password using our stored hash
+      if (!profile.password_hash) {
+        return { success: false, error: 'Invalid email or password' };
+      }
+
+      const passwordValid = await bcrypt.compare(password, profile.password_hash);
+      if (!passwordValid) {
+        return { success: false, error: 'Invalid email or password' };
+      }
+
+      // Update last login time
+      await supabase
+        .from('user_profiles')
+        .update({ last_login: new Date().toISOString() })
+        .eq('id', profile.id);
 
       // Generate JWT token
       const token = this.generateToken({
