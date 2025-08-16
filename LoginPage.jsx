@@ -1,19 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from './AuthContext';
-import { useLanguage } from './LanguageContext';
-import { authAPI } from './services/apiClient';
+import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
+import { useAuth } from './AuthContext';
+import { useLanguage } from './LanguageContext';
 
-// Validation schemas
-const emailLoginSchema = z.object({
+// Validation schema for email/password login
+const loginSchema = z.object({
   email: z.string().email('Invalid email address'),
   password: z.string().min(6, 'Password must be at least 6 characters'),
 });
-
-// Removed phone and OTP schemas - only email login supported
 
 function LoginPage() {
   const { login, error, clearError } = useAuth();
@@ -23,27 +20,24 @@ function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [apiError, setApiError] = useState('');
 
-  // Email login form
-  const emailForm = useForm({
-    resolver: zodResolver(emailLoginSchema),
+  // Form setup
+  const form = useForm({
+    resolver: zodResolver(loginSchema),
     defaultValues: {
       email: '',
       password: '',
     },
   });
 
-  // Removed phone and OTP forms - only email login supported
-
-  // Clear errors on component mount
+  // Clear errors on mount
   useEffect(() => {
     clearError();
     setApiError('');
   }, [clearError]);
 
-  const handleEmailLogin = async (data) => {
+  const onSubmit = async (data) => {
     setIsLoading(true);
     setApiError('');
-    
     try {
       await login(data.email, data.password);
       navigate('/dashboard');
@@ -53,82 +47,6 @@ function LoginPage() {
       setIsLoading(false);
     }
   };
-
-  const handleGoogleLogin = async (credentialResponse) => {
-    try {
-      setLoading(true);
-      setErrors({});
-
-      const response = await fetch('/api/auth/google', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          credential: credentialResponse.credential
-        })
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        // Store user data and redirect
-        login(data.user);
-        navigate('/dashboard');
-      } else {
-        setErrors({ submit: data.error || 'Google login failed' });
-      }
-    } catch (error) {
-      console.error('Google login error:', error);
-      setErrors({ submit: 'Google login failed. Please try again.' });
-    } finally {
-      setLoading(false);
-    }
-      
-      // Removed phone-related handlers - only email login supported
-
-  const handleGoogleError = () => {
-    setErrors({ submit: 'Google login was cancelled or failed' });
-  };
-
-  useEffect(() => {
-    // Load Google Identity Services script
-    const script = document.createElement('script');
-    script.src = 'https://accounts.google.com/gsi/client';
-    script.async = true;
-    script.defer = true;
-    script.onload = () => {
-      // Initialize Google Sign-In
-      if (window.google) {
-        window.google.accounts.id.initialize({
-          client_id: process.env.REACT_APP_GOOGLE_CLIENT_ID || '1234567890-abcdefghijklmnopqrstuvwxyz.apps.googleusercontent.com',
-          callback: handleGoogleLogin,
-          auto_select: false,
-          cancel_on_tap_outside: true
-        });
-
-        // Render the Google Sign-In button
-        window.google.accounts.id.renderButton(
-          document.getElementById('google-signin-button'),
-          {
-            theme: 'outline',
-            size: 'large',
-            width: '100%',
-            text: 'signin_with',
-            shape: 'rectangular'
-          }
-        );
-      }
-    };
-    document.head.appendChild(script);
-
-    // Cleanup
-    return () => {
-      if (document.head.contains(script)) {
-        document.head.removeChild(script);
-      }
-    };
-  }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
@@ -148,21 +66,20 @@ function LoginPage() {
           </div>
         )}
 
-        {/* Email login form */}
-        <form onSubmit={emailForm.handleSubmit(handleEmailLogin)} className="space-y-6">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           <div>
             <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
               {t('login.email', 'Email')}
             </label>
             <input
-              {...emailForm.register('email')}
+              {...form.register('email')}
               type="email"
               id="email"
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder={t('login.emailPlaceholder', 'Enter your email')}
             />
-            {emailForm.formState.errors.email && (
-              <p className="mt-1 text-sm text-red-600">{emailForm.formState.errors.email.message}</p>
+            {form.formState.errors.email && (
+              <p className="mt-1 text-sm text-red-600">{form.formState.errors.email.message}</p>
             )}
           </div>
 
@@ -171,14 +88,14 @@ function LoginPage() {
               {t('login.password', 'Password')}
             </label>
             <input
-              {...emailForm.register('password')}
+              {...form.register('password')}
               type="password"
               id="password"
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder={t('login.passwordPlaceholder', 'Enter your password')}
             />
-            {emailForm.formState.errors.password && (
-              <p className="mt-1 text-sm text-red-600">{emailForm.formState.errors.password.message}</p>
+            {form.formState.errors.password && (
+              <p className="mt-1 text-sm text-red-600">{form.formState.errors.password.message}</p>
             )}
           </div>
 
@@ -191,23 +108,6 @@ function LoginPage() {
           </button>
         </form>
 
-        <div className="mt-6">
-          <div className="relative">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-gray-300" />
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-white text-gray-500">
-                {t('login.orContinueWith', 'Or continue with')}
-              </span>
-            </div>
-          </div>
-
-          <div className="mt-6">
-            <div id="google-signin-button" className="w-full flex justify-center"></div>
-          </div>
-        </div>
-
         <div className="mt-6 text-center">
           <p className="text-sm text-gray-600">
             {t('login.noAccount', "Don't have an account?")}{' '}
@@ -217,7 +117,6 @@ function LoginPage() {
           </p>
         </div>
 
-        {/* Demo credentials */}
         <div className="mt-8 p-4 bg-gray-50 rounded-lg">
           <h3 className="text-sm font-medium text-gray-700 mb-2">Demo Credentials:</h3>
           <div className="text-xs text-gray-600 space-y-1">
@@ -230,6 +129,5 @@ function LoginPage() {
   );
 }
 
-}
 export default LoginPage;
 

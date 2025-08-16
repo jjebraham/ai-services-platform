@@ -32,6 +32,9 @@ function Navigation() {
             <Link to="/" className="nav-link">{t('home')}</Link>
             <Link to="/services" className="nav-link">{t('services')}</Link>
             <Link to="/payments" className="nav-link">{t('payments')}</Link>
+            <Link to="/basket" className="nav-link basket-link">
+              🛒 {t('basket')}
+            </Link>
             {user && <Link to="/dashboard" className="nav-link">{t('dashboard')}</Link>}
           </div>
           
@@ -39,9 +42,6 @@ function Navigation() {
           <div className="user-links">
             {user ? (
               <>
-                <Link to="/basket" className="nav-link basket-link">
-                  🛒 {t('basket')}
-                </Link>
                 <Link to="/admin" className="nav-link">Admin</Link>
                 <button onClick={handleLogout} className="nav-button logout">
                   {t('logout')}
