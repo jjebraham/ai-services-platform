@@ -88,18 +88,23 @@ export const AuthProvider = ({ children }) => {
           role: userData.role || 'user',
           balance: userData.balance || 0
         };
-        
+
+        // Store auth token if provided (e.g. from Google OAuth)
+        if (userData.token) {
+          localStorage.setItem('authToken', userData.token);
+        }
+
         localStorage.setItem('user', JSON.stringify(formattedUser));
         setIsAuthenticated(true);
         setUser(formattedUser);
         setIsAdmin(formattedUser.role === 'admin');
         return { success: true };
       }
-      
+
       // Email/password login
       if (email && password) {
-        const response = await authAPI.login(email, password);
-        
+        const response = await authAPI.login({ email, password });
+
         if (response.success) {
           const formattedUser = {
             id: response.user.id,
@@ -109,7 +114,12 @@ export const AuthProvider = ({ children }) => {
             role: response.user.role || 'user',
             balance: response.user.balance || 0
           };
-          
+
+          // Store auth token if backend returns one
+          if (response.token) {
+            localStorage.setItem('authToken', response.token);
+          }
+
           localStorage.setItem('user', JSON.stringify(formattedUser));
           setIsAuthenticated(true);
           setUser(formattedUser);
