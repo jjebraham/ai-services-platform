@@ -22,7 +22,7 @@ function Navigation() {
           <img
             src={theme === 'dark' ? '/kiani-exchange-logo-white.svg' : '/kiani-exchange-logo-gray.svg'}
             alt={t('siteName')}
-            className="h-8"
+            className="h-4"
           />
         </Link>
 
