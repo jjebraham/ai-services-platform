@@ -121,6 +121,7 @@ body.dark-theme {
 .nav-brand {
   display: flex;
   align-items: center;
+  margin-right: 4rem; /* Add space equal to width of 'Home' word */
 }
 
 .nav-logo {
@@ -2074,6 +2075,11 @@ html, body {
   .nav-container {
     flex-wrap: wrap;
     justify-content: center;
+  }
+  
+  /* Reduce logo spacing on mobile */
+  .nav-brand {
+    margin-right: 2rem;
   }
   
   /* Tables responsive */
