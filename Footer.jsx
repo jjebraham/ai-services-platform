@@ -17,7 +17,7 @@ function Footer() {
               <img
                 src="/kiani-exchange-logo-gray.svg"
                 alt="KIANI.EXCHANGE"
-                className="h-4"
+                className="h-2"
               />
             </Link>
             <p className="text-sm text-muted-foreground" dir={lang === 'fa' ? 'rtl' : 'ltr'}>
