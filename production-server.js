@@ -335,12 +335,15 @@ app.get('*', (req, res) => {
   
   // For all other routes, serve the React app
   const indexPath = path.join(__dirname, 'dist', 'index.html');
-  if (require('fs').existsSync(indexPath)) {
-    res.sendFile(indexPath);
-  } else {
-    // Fallback to public/index.html if dist doesn't exist
-    res.sendFile(path.join(__dirname, 'index.html'));
-  }
+  console.log(`🔄 SPA route requested: ${req.path} -> serving ${indexPath}`);
+  
+  // Always serve the React app for non-API routes
+  res.sendFile(indexPath, (err) => {
+    if (err) {
+      console.error(`❌ Error serving ${indexPath}:`, err);
+      res.status(500).send('Error loading application');
+    }
+  });
 });
 
 // Error handling middleware
