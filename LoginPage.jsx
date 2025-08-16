@@ -222,8 +222,8 @@ function LoginPage() {
         <div style={{marginTop: '2rem', padding: '1rem', background: '#f8f9fa', borderRadius: '8px', fontSize: '0.85rem'}}>
           <h3 style={{color: '#333', marginBottom: '0.5rem', fontWeight: '600'}}>Demo Credentials:</h3>
           <div style={{color: '#666'}}>
-            <p><strong>Email:</strong> demo@example.com</p>
-            <p><strong>Password:</strong> demo123</p>
+            <p><strong>Email:</strong> demo@aiservices.com</p>
+            <p><strong>Password:</strong> demo123456</p>
           </div>
         </div>
       </div>
