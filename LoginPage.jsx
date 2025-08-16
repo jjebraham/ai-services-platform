@@ -13,25 +13,14 @@ const emailLoginSchema = z.object({
   password: z.string().min(6, 'Password must be at least 6 characters'),
 });
 
-const phoneLoginSchema = z.object({
-  phoneNumber: z.string().regex(/^(\+98|0)?9\d{9}$/, 'Invalid phone number format'),
-});
-
-const otpVerificationSchema = z.object({
-  otp: z.string().length(6, 'OTP must be 6 digits'),
-});
+// Removed phone and OTP schemas - only email login supported
 
 function LoginPage() {
   const { login, error, clearError } = useAuth();
   const { t } = useLanguage();
   const navigate = useNavigate();
 
-  const [loginMethod, setLoginMethod] = useState('email'); // 'email' or 'phone'
-  const [step, setStep] = useState('login'); // 'login' or 'otp'
-  const [phoneNumber, setPhoneNumber] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [otpSent, setOtpSent] = useState(false);
-  const [countdown, setCountdown] = useState(0);
   const [apiError, setApiError] = useState('');
 
   // Email login form
@@ -43,36 +32,13 @@ function LoginPage() {
     },
   });
 
-  // Phone login form
-  const phoneForm = useForm({
-    resolver: zodResolver(phoneLoginSchema),
-    defaultValues: {
-      phoneNumber: '',
-    },
-  });
+  // Removed phone and OTP forms - only email login supported
 
-  // OTP verification form
-  const otpForm = useForm({
-    resolver: zodResolver(otpVerificationSchema),
-    defaultValues: {
-      otp: '',
-    },
-  });
-
-  // Countdown timer for OTP resend
-  useEffect(() => {
-    let timer;
-    if (countdown > 0) {
-      timer = setTimeout(() => setCountdown(countdown - 1), 1000);
-    }
-    return () => clearTimeout(timer);
-  }, [countdown]);
-
-  // Clear errors when switching methods
+  // Clear errors on component mount
   useEffect(() => {
     clearError();
     setApiError('');
-  }, [loginMethod, clearError]);
+  }, [clearError]);
 
   const handleEmailLogin = async (data) => {
     setIsLoading(true);
@@ -119,72 +85,7 @@ function LoginPage() {
       setLoading(false);
     }
       
-      if (response.success) {
-        setPhoneNumber(data.phoneNumber);
-        setStep('otp');
-        setOtpSent(true);
-        setCountdown(300); // 5 minutes
-      } else {
-        setApiError(response.error || 'Failed to send OTP');
-      }
-    } catch (err) {
-      setApiError(err.message || 'Failed to send OTP');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleVerifyOTP = async (data) => {
-    setIsLoading(true);
-    setApiError('');
-    
-    try {
-      const response = await authAPI.verifyOTP(phoneNumber, data.otp);
-      
-      if (response.success) {
-        // Update auth context with user data
-        await login(null, null, response.user);
-        navigate('/dashboard');
-      } else {
-        setApiError(response.error || 'Invalid OTP');
-      }
-    } catch (err) {
-      setApiError(err.message || 'OTP verification failed');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleResendOTP = async () => {
-    if (countdown > 0) return;
-    
-    setIsLoading(true);
-    setApiError('');
-    
-    try {
-      const response = await authAPI.sendOTP(phoneNumber);
-      
-      if (response.success) {
-        setCountdown(300); // 5 minutes
-        setApiError('');
-      } else {
-        setApiError(response.error || 'Failed to resend OTP');
-      }
-    } catch (err) {
-      setApiError(err.message || 'Failed to resend OTP');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleBackToPhone = () => {
-    setStep('login');
-    setOtpSent(false);
-    setCountdown(0);
-    setApiError('');
-    otpForm.reset();
->>>>>>> b465f0f9346d47e466896a7088e1cffc20b46831
-  };
+      // Removed phone-related handlers - only email login supported
 
   const handleGoogleError = () => {
     setErrors({ submit: 'Google login was cancelled or failed' });
@@ -234,13 +135,10 @@ function LoginPage() {
       <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            {step === 'otp' ? t('login.verifyOTP', 'Verify OTP') : t('login.title', 'Welcome Back')}
+            {t('login.title', 'Welcome Back')}
           </h1>
           <p className="text-gray-600">
-            {step === 'otp' 
-              ? t('login.otpSubtitle', `Enter the verification code sent to ${phoneNumber}`)
-              : t('login.subtitle', 'Sign in to your account')
-            }
+            {t('login.subtitle', 'Sign in to your account')}
           </p>
         </div>
 
@@ -250,167 +148,83 @@ function LoginPage() {
           </div>
         )}
 
-        {step === 'login' && (
-          <>
-            {/* Login method selector */}
-            <div className="mb-6">
-              <div className="flex rounded-lg bg-gray-100 p-1">
-                <button
-                  type="button"
-                  onClick={() => setLoginMethod('email')}
-                  className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
-                    loginMethod === 'email'
-                      ? 'bg-white text-blue-600 shadow-sm'
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                >
-                  {t('login.email', 'Email')}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setLoginMethod('phone')}
-                  className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-colors ${
-                    loginMethod === 'phone'
-                      ? 'bg-white text-blue-600 shadow-sm'
-                      : 'text-gray-600 hover:text-gray-900'
-                  }`}
-                >
-                  {t('login.phone', 'Phone')}
-                </button>
-              </div>
-            </div>
-
-            {/* Email login form */}
-            {loginMethod === 'email' && (
-              <form onSubmit={emailForm.handleSubmit(handleEmailLogin)} className="space-y-6">
-                <div>
-                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                    {t('login.email', 'Email')}
-                  </label>
-                  <input
-                    {...emailForm.register('email')}
-                    type="email"
-                    id="email"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder={t('login.emailPlaceholder', 'Enter your email')}
-                  />
-                  {emailForm.formState.errors.email && (
-                    <p className="mt-1 text-sm text-red-600">{emailForm.formState.errors.email.message}</p>
-                  )}
-                </div>
-
-                <div>
-                  <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
-                    {t('login.password', 'Password')}
-                  </label>
-                  <input
-                    {...emailForm.register('password')}
-                    type="password"
-                    id="password"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder={t('login.passwordPlaceholder', 'Enter your password')}
-                  />
-                  {emailForm.formState.errors.password && (
-                    <p className="mt-1 text-sm text-red-600">{emailForm.formState.errors.password.message}</p>
-                  )}
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition duration-200"
-                >
-                  {isLoading ? t('login.signingIn', 'Signing in...') : t('login.signIn', 'Sign In')}
-                </button>
-              </form>
+        {/* Email login form */}
+        <form onSubmit={emailForm.handleSubmit(handleEmailLogin)} className="space-y-6">
+          <div>
+            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+              {t('login.email', 'Email')}
+            </label>
+            <input
+              {...emailForm.register('email')}
+              type="email"
+              id="email"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder={t('login.emailPlaceholder', 'Enter your email')}
+            />
+            {emailForm.formState.errors.email && (
+              <p className="mt-1 text-sm text-red-600">{emailForm.formState.errors.email.message}</p>
             )}
+          </div>
 
-            {/* Phone login form */}
-            {loginMethod === 'phone' && (
-              <form onSubmit={phoneForm.handleSubmit(handleSendOTP)} className="space-y-6">
-                <div>
-                  <label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-700 mb-1">
-                    {t('login.phoneNumber', 'Phone Number')}
-                  </label>
-                  <input
-                    {...phoneForm.register('phoneNumber')}
-                    type="tel"
-                    id="phoneNumber"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    placeholder={t('login.phonePlaceholder', '09123456789')}
-                  />
-                  {phoneForm.formState.errors.phoneNumber && (
-                    <p className="mt-1 text-sm text-red-600">{phoneForm.formState.errors.phoneNumber.message}</p>
-                  )}
-                </div>
-
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition duration-200"
-                >
-                  {isLoading ? t('login.sendingOTP', 'Sending...') : t('login.sendOTP', 'Send Verification Code')}
-                </button>
-              </form>
+          <div>
+            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+              {t('login.password', 'Password')}
+            </label>
+            <input
+              {...emailForm.register('password')}
+              type="password"
+              id="password"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder={t('login.passwordPlaceholder', 'Enter your password')}
+            />
+            {emailForm.formState.errors.password && (
+              <p className="mt-1 text-sm text-red-600">{emailForm.formState.errors.password.message}</p>
             )}
-          </>
-        )}
+          </div>
 
-        {/* OTP verification form */}
-        {step === 'otp' && (
-          <form onSubmit={otpForm.handleSubmit(handleVerifyOTP)} className="space-y-6">
-            <div>
-              <label htmlFor="otp" className="block text-sm font-medium text-gray-700 mb-1">
-                {t('login.verificationCode', 'Verification Code')}
-              </label>
-              <input
-                {...otpForm.register('otp')}
-                type="text"
-                id="otp"
-                maxLength="6"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-center text-lg tracking-widest"
-                placeholder="000000"
-              />
-              {otpForm.formState.errors.otp && (
-                <p className="mt-1 text-sm text-red-600">{otpForm.formState.errors.otp.message}</p>
-              )}
+          <button
+            type="submit"
+            disabled={isLoading}
+            className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition duration-200"
+          >
+            {isLoading ? t('login.signingIn', 'Signing in...') : t('login.signIn', 'Sign In')}
+          </button>
+        </form>
+
+        <div className="mt-6">
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-300" />
             </div>
-
-            <button
-              type="submit"
-              disabled={isLoading}
-              className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition duration-200"
-            >
-              {isLoading ? t('login.verifying', 'Verifying...') : t('login.verify', 'Verify')}
-            </button>
-
-<<<<<<< HEAD
-          <div className="divider">
-            <span>{t('orContinueWith')}</span>
-          </div>
-
-          <div id="google-signin-button" className="w-full flex justify-center"></div>
-
-          <div className="login-footer">
-            <p className="signup-prompt">
-              {t('noAccount')}{' '}
-              <Link to="/register" className="signup-link">
-                {t('signUpLink')}
-              </Link>
-            </p>
-          </div>
-        )}
-
-        {/* Demo credentials - only show for email login */}
-        {step === 'login' && loginMethod === 'email' && (
-          <div className="mt-8 p-4 bg-gray-50 rounded-lg">
-            <h3 className="text-sm font-medium text-gray-700 mb-2">Demo Credentials:</h3>
-            <div className="text-xs text-gray-600 space-y-1">
-              <p><strong>Email:</strong> demo@example.com</p>
-              <p><strong>Password:</strong> demo123</p>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-2 bg-white text-gray-500">
+                {t('login.orContinueWith', 'Or continue with')}
+              </span>
             </div>
           </div>
-        )}
+
+          <div className="mt-6">
+            <div id="google-signin-button" className="w-full flex justify-center"></div>
+          </div>
+        </div>
+
+        <div className="mt-6 text-center">
+          <p className="text-sm text-gray-600">
+            {t('login.noAccount', "Don't have an account?")}{' '}
+            <Link to="/register" className="font-medium text-blue-600 hover:text-blue-500">
+              {t('login.signUpLink', 'Sign up')}
+            </Link>
+          </p>
+        </div>
+
+        {/* Demo credentials */}
+        <div className="mt-8 p-4 bg-gray-50 rounded-lg">
+          <h3 className="text-sm font-medium text-gray-700 mb-2">Demo Credentials:</h3>
+          <div className="text-xs text-gray-600 space-y-1">
+            <p><strong>Email:</strong> demo@example.com</p>
+            <p><strong>Password:</strong> demo123</p>
+          </div>
+        </div>
       </div>
     </div>
   );
