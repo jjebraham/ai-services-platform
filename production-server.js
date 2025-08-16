@@ -29,20 +29,10 @@ supabaseConfig.initialize();
 // Trust proxy for rate limiting and security (important for production)
 app.set('trust proxy', 1);
 
-// Security middleware
+// Security middleware - CSP disabled to avoid conflicts with nginx
 app.use(helmet({
   crossOriginEmbedderPolicy: false,
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdn.tailwindcss.com"],
-      fontSrc: ["'self'", "https://fonts.gstatic.com"],
-      imgSrc: ["'self'", "data:", "https:"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.tailwindcss.com", "https://cdn.jsdelivr.net", "https://accounts.google.com"],
-      connectSrc: ["'self'", "https://api.stripe.com", "https://accounts.google.com"],
-      frameSrc: ["'self'", "https://js.stripe.com", "https://accounts.google.com"]
-    }
-  }
+  contentSecurityPolicy: false
 }));
 
 // CORS configuration for production
