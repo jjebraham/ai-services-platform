@@ -1393,8 +1393,8 @@ body.dark-theme .nav-link:hover {
   text-decoration: underline;
 }
 
-/* Register Page Styles */
-.register-page {
+/* Register and Login Page Styles */
+.register-page, .login-page {
   min-height: 100vh;
   display: flex;
   align-items: center;
@@ -1555,7 +1555,77 @@ body.dark-theme .nav-link:hover {
   display: flex;
   align-items: center;
   gap: 1rem;
-  margin: 1rem 0;
+  margin: 1.5rem 0;
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.divider::before,
+.divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #ddd;
+}
+
+.google-button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background: white;
+  color: #333;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-bottom: 1rem;
+}
+
+.google-button:hover:not(:disabled) {
+  border-color: #ccc;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.google-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.register-links {
+  text-align: center;
+  font-size: 0.9rem;
+  color: #666;
+  margin-top: 1rem;
+}
+
+.link {
+  color: #007bff;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.link:hover {
+  text-decoration: underline;
+}
+
+.global-error {
+  background: #ffebee;
+  color: #c62828;
+  padding: 1rem;
+  border-radius: 6px;
+  margin-bottom: 1.5rem;
+  font-size: 0.9rem;
+}
+
+.name-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
 }
 
 .divider-line {

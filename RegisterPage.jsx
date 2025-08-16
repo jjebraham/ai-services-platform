@@ -1,61 +1,22 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import { useLanguage } from './LanguageContext';
-
-// Simple 6-box OTP input
-function OtpInput({ value, onChange, disabled }) {
-  const vals = useMemo(() => (value || '').padEnd(6, ' ').slice(0, 6).split(''), [value]);
-  const setAt = (i, ch) => {
-    const cleaned = (value || '').split('');
-    cleaned[i] = ch.replace(/\D/g, '').slice(0, 1);
-    onChange(cleaned.join('').slice(0, 6));
-  };
-  return (
-    <div style={{ display: 'flex', gap: 8 }}>
-      {vals.map((ch, i) => (
-        <input
-          key={i}
-          inputMode="numeric"
-          pattern="\d*"
-          maxLength={1}
-          disabled={disabled}
-          value={ch.trim()}
-          onChange={(e) => setAt(i, e.target.value)}
-          style={{
-            width: 42,
-            height: 48,
-            textAlign: 'center',
-            fontSize: 22,
-            border: '1px solid #444',
-            background: '#111',
-            color: '#fff',
-            borderRadius: 8,
-          }}
-        />
-      ))}
-    </div>
-  );
-}
 
 function RegisterPage() {
   const navigate = useNavigate();
   const { login } = useAuth();
   const { t } = useLanguage();
 
-  const [step, setStep] = useState('form'); // form | otp
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
-    phone: '',
     email: '',
     password: '',
     confirmPassword: '',
   });
-  const [otp, setOtp] = useState('');
   const [errors, setErrors] = useState({});
   const [isLoading, setIsLoading] = useState(false);
-  const [resendIn, setResendIn] = useState(0);
 
   const validateForm = () => {
     const newErrors = {};
@@ -68,11 +29,7 @@ function RegisterPage() {
       newErrors.lastName = t('lastNameRequired') || 'Last name is required';
     }
 
-    if (!formData.phone.trim()) {
-      newErrors.phone = t('phoneRequired') || 'Phone number is required';
-    } else if (!/^\+?[1-9]\d{1,14}$/.test(formData.phone.replace(/\s/g, ''))) {
-      newErrors.phone = t('phoneInvalid') || 'Please enter a valid phone number';
-    }
+
 
     if (!formData.email.trim()) {
       newErrors.email = t('emailRequired') || 'Email is required';
@@ -93,64 +50,33 @@ function RegisterPage() {
     return newErrors;
   };
 
-  const startOtp = async () => {
+  const registerUser = async () => {
     try {
       setIsLoading(true);
       setErrors({});
 
-      const response = await fetch('/api/auth/send-otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: formData.phone }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to send OTP');
-      }
-
-      setStep('otp');
-      setResendIn(60);
-    } catch (error) {
-      console.error('OTP Error:', error);
-      setErrors({ submit: error.message });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const verifyOtp = async () => {
-    try {
-      setIsLoading(true);
-      setErrors({});
-
-      const response = await fetch('/api/auth/verify-otp', {
+      const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          phone: formData.phone,
-          otp,
-          userData: {
-            firstName: formData.firstName,
-            lastName: formData.lastName,
-            email: formData.email,
-            password: formData.password,
-          },
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          email: formData.email,
+          password: formData.password,
         }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || 'Verification failed');
+        throw new Error(data.message || 'Registration failed');
       }
 
       // Auto-login after successful registration
       login(data.user, data.token);
       navigate('/dashboard');
     } catch (error) {
-      console.error('Verification Error:', error);
+      console.error('Registration Error:', error);
       setErrors({ submit: error.message });
     } finally {
       setIsLoading(false);
@@ -160,20 +86,12 @@ function RegisterPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (step === 'form') {
-      const formErrors = validateForm();
-      if (Object.keys(formErrors).length > 0) {
-        setErrors(formErrors);
-        return;
-      }
-      await startOtp();
-    } else {
-      if (!otp || otp.length !== 6) {
-        setErrors({ otp: t('otpRequired') || 'Please enter the 6-digit code' });
-        return;
-      }
-      await verifyOtp();
+    const formErrors = validateForm();
+    if (Object.keys(formErrors).length > 0) {
+      setErrors(formErrors);
+      return;
     }
+    await registerUser();
   };
 
   const handleInputChange = (e) => {
@@ -188,24 +106,13 @@ function RegisterPage() {
     window.location.href = '/api/auth/google';
   };
 
-  const resend = async () => {
-    if (resendIn > 0) return;
-    await startOtp();
-  };
+
 
   const handleGoogleError = () => {
     setErrors({ submit: 'Google signup was cancelled or failed' });
   };
 
-  useEffect(() => {
-    let interval;
-    if (resendIn > 0) {
-      interval = setInterval(() => {
-        setResendIn(prev => prev - 1);
-      }, 1000);
-    }
-    return () => clearInterval(interval);
-  }, [resendIn]);
+
 
   useEffect(() => {
     const handleGoogleCallback = () => {
@@ -243,133 +150,90 @@ function RegisterPage() {
         {errors.submit && <div className="form-error global-error">{errors.submit}</div>}
 
         <form onSubmit={handleSubmit} className="register-form">
-          {step === 'form' && (
-            <>
-              <div className="name-row">
-                <div className="form-group">
-                  <label htmlFor="firstName" className="form-label">
-                    {t('firstName') || 'First Name'}
-                  </label>
-                  <input
-                    type="text"
-                    id="firstName"
-                    name="firstName"
-                    value={formData.firstName}
-                    onChange={handleInputChange}
-                    className={`form-input ${errors.firstName ? 'error' : ''}`}
-                    disabled={isLoading}
-                  />
-                  {errors.firstName && <div className="form-error">{errors.firstName}</div>}
-                </div>
-
-                <div className="form-group">
-                  <label htmlFor="lastName" className="form-label">
-                    {t('lastName') || 'Last Name'}
-                  </label>
-                  <input
-                    type="text"
-                    id="lastName"
-                    name="lastName"
-                    value={formData.lastName}
-                    onChange={handleInputChange}
-                    className={`form-input ${errors.lastName ? 'error' : ''}`}
-                    disabled={isLoading}
-                  />
-                  {errors.lastName && <div className="form-error">{errors.lastName}</div>}
-                </div>
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="phone" className="form-label">
-                  {t('phoneNumber') || 'Phone Number'}
-                </label>
-                <input
-                  type="tel"
-                  id="phone"
-                  name="phone"
-                  value={formData.phone}
-                  onChange={handleInputChange}
-                  className={`form-input ${errors.phone ? 'error' : ''}`}
-                  placeholder="+1234567890"
-                  disabled={isLoading}
-                />
-                {errors.phone && <div className="form-error">{errors.phone}</div>}
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="email" className="form-label">
-                  {t('email') || 'Email'}
-                </label>
-                <input
-                  type="email"
-                  id="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  className={`form-input ${errors.email ? 'error' : ''}`}
-                  disabled={isLoading}
-                />
-                {errors.email && <div className="form-error">{errors.email}</div>}
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="password" className="form-label">
-                  {t('password') || 'Password'}
-                </label>
-                <input
-                  type="password"
-                  id="password"
-                  name="password"
-                  value={formData.password}
-                  onChange={handleInputChange}
-                  className={`form-input ${errors.password ? 'error' : ''}`}
-                  disabled={isLoading}
-                />
-                {errors.password && <div className="form-error">{errors.password}</div>}
-              </div>
-
-              <div className="form-group">
-                <label htmlFor="confirmPassword" className="form-label">
-                  {t('confirmPassword') || 'Confirm Password'}
-                </label>
-                <input
-                  type="password"
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  value={formData.confirmPassword}
-                  onChange={handleInputChange}
-                  className={`form-input ${errors.confirmPassword ? 'error' : ''}`}
-                  disabled={isLoading}
-                />
-                {errors.confirmPassword && <div className="form-error">{errors.confirmPassword}</div>}
-              </div>
-            </>
-          )}
-
-          {step === 'otp' && (
+          <div className="name-row">
             <div className="form-group">
-              <label className="form-label">
-                {t('enterOtp') || 'Enter the 6-digit code'}
+              <label htmlFor="firstName" className="form-label">
+                {t('firstName') || 'First Name'}
               </label>
-              <OtpInput value={otp} onChange={setOtp} disabled={isLoading} />
-              <div style={{ marginTop: 12, fontSize: 13, color: '#888' }}>
-                {resendIn > 0 ? (
-                  (t('resendIn') || 'Resend in') + ` ${resendIn}s`
-                ) : (
-                  <button type="button" onClick={resend} className="link">
-                    {t('resendCode') || 'Resend code'}
-                  </button>
-                )}
-              </div>
+              <input
+                type="text"
+                id="firstName"
+                name="firstName"
+                value={formData.firstName}
+                onChange={handleInputChange}
+                className={`form-input ${errors.firstName ? 'error' : ''}`}
+                disabled={isLoading}
+              />
+              {errors.firstName && <div className="form-error">{errors.firstName}</div>}
             </div>
-          )}
+
+            <div className="form-group">
+              <label htmlFor="lastName" className="form-label">
+                {t('lastName') || 'Last Name'}
+              </label>
+              <input
+                type="text"
+                id="lastName"
+                name="lastName"
+                value={formData.lastName}
+                onChange={handleInputChange}
+                className={`form-input ${errors.lastName ? 'error' : ''}`}
+                disabled={isLoading}
+              />
+              {errors.lastName && <div className="form-error">{errors.lastName}</div>}
+            </div>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="email" className="form-label">
+              {t('email') || 'Email'}
+            </label>
+            <input
+              type="email"
+              id="email"
+              name="email"
+              value={formData.email}
+              onChange={handleInputChange}
+              className={`form-input ${errors.email ? 'error' : ''}`}
+              disabled={isLoading}
+            />
+            {errors.email && <div className="form-error">{errors.email}</div>}
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="password" className="form-label">
+              {t('password') || 'Password'}
+            </label>
+            <input
+              type="password"
+              id="password"
+              name="password"
+              value={formData.password}
+              onChange={handleInputChange}
+              className={`form-input ${errors.password ? 'error' : ''}`}
+              disabled={isLoading}
+            />
+            {errors.password && <div className="form-error">{errors.password}</div>}
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="confirmPassword" className="form-label">
+              {t('confirmPassword') || 'Confirm Password'}
+            </label>
+            <input
+              type="password"
+              id="confirmPassword"
+              name="confirmPassword"
+              value={formData.confirmPassword}
+              onChange={handleInputChange}
+              className={`form-input ${errors.confirmPassword ? 'error' : ''}`}
+              disabled={isLoading}
+            />
+            {errors.confirmPassword && <div className="form-error">{errors.confirmPassword}</div>}
+          </div>
 
           <button type="submit" className="register-button" disabled={isLoading}>
-            {isLoading
-              ? '⏳'
-              : step === 'form'
-              ? t('sendVerificationCode') || 'Send code'
-              : t('verifyAndCreate') || 'Verify & Create'}
+            {isLoading ? '⏳' : t('createAccount') || 'Create Account'}
           </button>
         </form>
 
