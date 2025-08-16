@@ -56,8 +56,8 @@ function LoginPage() {
 
   const handleGoogleLogin = async (credentialResponse) => {
     try {
-      setLoading(true);
-      setErrors({});
+      setIsLoading(true);
+      setApiError('');
 
       const response = await fetch('/api/auth/google', {
         method: 'POST',
@@ -73,22 +73,21 @@ function LoginPage() {
 
       if (data.success) {
         // Store user data and redirect
-        login(data.user);
+        await login(data.user);
         navigate('/dashboard');
       } else {
-        setErrors({ submit: data.error || 'Google login failed' });
+        setApiError(data.error || 'Google login failed');
       }
     } catch (error) {
       console.error('Google login error:', error);
-      setErrors({ submit: 'Google login failed. Please try again.' });
+      setApiError('Google login failed. Please try again.');
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
-      
-      // Removed phone-related handlers - only email login supported
+  };
 
   const handleGoogleError = () => {
-    setErrors({ submit: 'Google login was cancelled or failed' });
+    setApiError('Google login was cancelled or failed');
   };
 
   useEffect(() => {
@@ -230,6 +229,5 @@ function LoginPage() {
   );
 }
 
-}
 export default LoginPage;
 
