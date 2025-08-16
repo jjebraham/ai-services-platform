@@ -129,7 +129,7 @@ function LoginPage() {
       // Initialize Google Sign-In
       if (window.google) {
         window.google.accounts.id.initialize({
-          client_id: process.env.REACT_APP_GOOGLE_CLIENT_ID || '1234567890-abcdefghijklmnopqrstuvwxyz.apps.googleusercontent.com',
+          client_id: '75748031610-mie84kot707nol668ba2c5fu3h9o33ij.apps.googleusercontent.com',
           callback: handleGoogleLogin,
           auto_select: false,
           cancel_on_tap_outside: true
@@ -230,7 +230,7 @@ function LoginPage() {
         {/* Google Sign-in */}
         <button
           type="button"
-          onClick={handleGoogleLogin}
+          id="google-signin-button"
           className="google-button"
           disabled={isLoading}
         >
