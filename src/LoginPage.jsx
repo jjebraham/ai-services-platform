@@ -44,8 +44,11 @@ function LoginPage() {
     setIsLoading(true);
     setApiError('');
     
+    console.log('🔐 Login attempt with:', { email: data.email, password: data.password });
+    
     try {
       // Make direct API call to test
+      console.log('📡 Sending request to /api/auth/login...');
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: {
@@ -57,17 +60,23 @@ function LoginPage() {
         })
       });
 
+      console.log('📥 Response status:', response.status);
+      console.log('📥 Response headers:', response.headers);
+
       const result = await response.json();
+      console.log('📥 Response data:', result);
 
       if (result.success) {
+        console.log('✅ Login successful, redirecting...');
         // Store user data and redirect
         await login(data.email, data.password);
         navigate('/dashboard');
       } else {
+        console.log('❌ Login failed:', result.error);
         setApiError(result.error || 'Login failed');
       }
     } catch (err) {
-      console.error('Login error:', err);
+      console.error('💥 Login error:', err);
       setApiError(err.message || 'Login failed');
     } finally {
       setIsLoading(false);
@@ -168,7 +177,10 @@ function LoginPage() {
         )}
 
         {/* Email login form */}
-        <form onSubmit={emailForm.handleSubmit(handleEmailLogin)} className="register-form">
+        <form onSubmit={(e) => {
+          console.log('📝 Form submitted!');
+          emailForm.handleSubmit(handleEmailLogin)(e);
+        }} className="register-form">
           <div className="form-group">
             <label htmlFor="email" className="form-label">
               {t('login.email', 'Email')}
