@@ -1,431 +1,3 @@
-const supabaseConfig = require('../supabase-config');
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-
-class AuthService {
-  constructor() {
-    // Don't store clients in constructor - get them dynamically
-  }
-
-  // Register new user
-  async register(userData) {
-    const { email, password, fullName, googleId, profilePicture, isGoogleUser } = userData;
-
-    try {
-      // Check if Supabase is configured
-      if (!supabaseConfig.isConfigured()) {
-        return { 
-          success: false, 
-          error: 'Database not configured. Please contact administrator.' 
-        };
-      }
-
-      // Get clients dynamically
-      const supabase = supabaseConfig.getClient();
-      const adminSupabase = supabaseConfig.getAdminClient();
-
-      if (!supabase) {
-        return { 
-          success: false, 
-          error: 'Database connection not available. Please contact administrator.' 
-        };
-      }
-
-      // Check if user already exists
-      const { data: existingUser } = await supabase
-        .from('user_profiles')
-        .select('email')
-        .eq('email', email)
-        .single();
-
-      if (existingUser) {
-        return { success: false, error: 'User already exists with this email' };
-      }
-
-      let hashedPassword = null;
-      let authData = null;
-
-      // Handle Google OAuth users differently
-      if (isGoogleUser) {
-        // For Google users, create a dummy auth entry or skip Supabase Auth
-        authData = { user: { id: googleId || `google_${Date.now()}` } };
-      } else {
-        // Hash password for regular users
-        const saltRounds = 12;
-        hashedPassword = await bcrypt.hash(password, saltRounds);
-
-        // Create user in Supabase Auth
-        const { data: authResult, error: authError } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: {
-              full_name: fullName
-            }
-          }
-        });
-
-        if (authError) {
-          return { success: false, error: authError.message };
-        }
-        authData = authResult;
-      }
-
-      // Create user profile
-      const profileInsert = {
-        id: authData.user.id,
-        email,
-        full_name: fullName,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        is_active: true,
-        role: 'user'
-      };
-
-      // Add password hash for non-Google users
-      if (!isGoogleUser && hashedPassword) {
-        profileInsert.password_hash = hashedPassword;
-      }
-
-      // Add Google-specific fields
-      if (isGoogleUser) {
-        profileInsert.google_id = googleId;
-        profileInsert.profile_picture = profilePicture;
-        profileInsert.is_google_user = true;
-      }
-
-      const { data: profileData, error: profileError } = await supabase
-        .from('user_profiles')
-        .insert([profileInsert])
-        .select()
-        .single();
-
-      if (profileError) {
-        // Clean up auth user if profile creation fails
-        if (adminSupabase) {
-          await adminSupabase.auth.admin.deleteUser(authData.user.id);
-        }
-        return { success: false, error: profileError.message };
-      }
-
-      return {
-        success: true,
-        message: 'User registered successfully',
-        user: {
-          id: profileData.id,
-          email: profileData.email,
-          fullName: profileData.full_name,
-          role: profileData.role
-        }
-      };
-
-    } catch (error) {
-      console.error('Registration error:', error);
-      return { success: false, error: 'Registration failed. Please try again.' };
-    }
-  }
-
-  // Login user
-  async login(email, password) {
-    try {
-      if (!supabaseConfig.isConfigured()) {
-        return { 
-          success: false, 
-          error: 'Database not configured. Please contact administrator.' 
-        };
-      }
-
-      // Get client dynamically
-      const supabase = supabaseConfig.getClient();
-
-      if (!supabase) {
-        return { 
-          success: false, 
-          error: 'Database connection not available. Please contact administrator.' 
-        };
-      }
-
-      // Get user profile
-      const { data: userProfile, error: profileError } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .eq('email', email)
-        .eq('is_active', true)
-        .single();
-
-      if (profileError || !userProfile) {
-        return { success: false, error: 'Invalid email or password' };
-      }
-
-      // Verify password
-      const isValidPassword = await bcrypt.compare(password, userProfile.password_hash);
-      if (!isValidPassword) {
-        return { success: false, error: 'Invalid email or password' };
-      }
-
-      // Sign in with Supabase Auth
-      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
-
-      if (authError) {
-        return { success: false, error: authError.message };
-      }
-
-      // Generate JWT token
-      const token = jwt.sign(
-        { 
-          userId: userProfile.id, 
-          email: userProfile.email,
-          role: userProfile.role 
-        },
-        process.env.JWT_SECRET || 'your-jwt-secret',
-        { expiresIn: '24h' }
-      );
-
-      // Update last login
-      await supabase
-        .from('user_profiles')
-        .update({ last_login: new Date().toISOString() })
-        .eq('id', userProfile.id);
-
-      return {
-        success: true,
-        message: 'Login successful',
-        token,
-        user: {
-          id: userProfile.id,
-          email: userProfile.email,
-          fullName: userProfile.full_name,
-          role: userProfile.role
-        }
-      };
-
-    } catch (error) {
-      console.error('Login error:', error);
-      return { success: false, error: 'Login failed. Please try again.' };
-    }
-  }
-
-  // Get user profile
-  async getUserProfile(userId) {
-    try {
-      const supabase = supabaseConfig.getClient();
-
-      if (!supabase) {
-        return { success: false, error: 'Database connection not available' };
-      }
-
-      const { data: userProfile, error } = await supabase
-        .from('user_profiles')
-        .select('id, email, full_name, role, created_at, last_login, is_active')
-        .eq('id', userId)
-        .single();
-
-      if (error) {
-        return { success: false, error: error.message };
-      }
-
-      return {
-        success: true,
-        user: userProfile
-      };
-
-    } catch (error) {
-      console.error('Get profile error:', error);
-      return { success: false, error: 'Failed to get user profile' };
-    }
-  }
-
-  // Update user profile
-  async updateProfile(userId, updateData) {
-    try {
-      const supabase = supabaseConfig.getClient();
-
-      if (!supabase) {
-        return { success: false, error: 'Database connection not available' };
-      }
-
-      const { data: updatedProfile, error } = await supabase
-        .from('user_profiles')
-        .update({
-          ...updateData,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', userId)
-        .select()
-        .single();
-
-      if (error) {
-        return { success: false, error: error.message };
-      }
-
-      return {
-        success: true,
-        message: 'Profile updated successfully',
-        user: updatedProfile
-      };
-
-    } catch (error) {
-      console.error('Update profile error:', error);
-      return { success: false, error: 'Failed to update profile' };
-    }
-  }
-
-  // Google OAuth login
-  async googleLogin(googleData) {
-    const { googleId, email, fullName, picture } = googleData;
-
-    try {
-      if (!supabaseConfig.isConfigured()) {
-        return { 
-          success: false, 
-          error: 'Database not configured. Please contact administrator.' 
-        };
-      }
-
-      const supabase = supabaseConfig.getClient();
-      const adminSupabase = supabaseConfig.getAdminClient();
-
-      if (!supabase) {
-        return { 
-          success: false, 
-          error: 'Database connection not available. Please contact administrator.' 
-        };
-      }
-
-      // Check if user already exists
-      const { data: existingUser, error: userError } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .eq('email', email)
-        .eq('is_active', true)
-        .single();
-
-      let user;
-
-      if (existingUser) {
-        // Update existing user with Google ID if not set
-        if (!existingUser.google_id) {
-          const { data: updatedUser, error: updateError } = await supabase
-            .from('user_profiles')
-            .update({
-              google_id: googleId,
-              profile_picture: picture,
-              last_login: new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', existingUser.id)
-            .select()
-            .single();
-
-          if (updateError) {
-            return { success: false, error: updateError.message };
-          }
-          user = updatedUser;
-        } else {
-          // Just update last login
-          const { data: updatedUser, error: updateError } = await supabase
-            .from('user_profiles')
-            .update({
-              last_login: new Date().toISOString(),
-              updated_at: new Date().toISOString()
-            })
-            .eq('id', existingUser.id)
-            .select()
-            .single();
-
-          if (updateError) {
-            return { success: false, error: updateError.message };
-          }
-          user = updatedUser;
-        }
-      } else {
-        // Create new user
-        const userId = `google_${googleId}_${Date.now()}`;
-
-        // Create user profile
-        const { data: newUser, error: createError } = await supabase
-          .from('user_profiles')
-          .insert([
-            {
-              id: userId,
-              email,
-              full_name: fullName,
-              google_id: googleId,
-              profile_picture: picture,
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-              last_login: new Date().toISOString(),
-              is_active: true,
-              role: 'user',
-              password_hash: null // No password for Google OAuth users
-            }
-          ])
-          .select()
-          .single();
-
-        if (createError) {
-          return { success: false, error: createError.message };
-        }
-        user = newUser;
-      }
-
-      // Generate JWT token
-      const token = jwt.sign(
-        { 
-          userId: user.id, 
-          email: user.email,
-          role: user.role 
-        },
-        process.env.JWT_SECRET || 'your-jwt-secret',
-        { expiresIn: '24h' }
-      );
-
-      return {
-        success: true,
-        message: existingUser ? 'Login successful' : 'Account created and logged in successfully',
-        token,
-        user: {
-          id: user.id,
-          email: user.email,
-          fullName: user.full_name,
-          role: user.role,
-          profilePicture: user.profile_picture
-        }
-      };
-
-    } catch (error) {
-      console.error('Google login error:', error);
-      return { success: false, error: 'Google authentication failed. Please try again.' };
-    }
-  }
-
-  // Logout user
-  async logout() {
-    try {
-      const supabase = supabaseConfig.getClient();
-
-      if (!supabase) {
-        return { success: false, error: 'Database connection not available' };
-      }
-
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        return { success: false, error: error.message };
-      }
-
-      return { success: true, message: 'Logged out successfully' };
-    } catch (error) {
-      console.error('Logout error:', error);
-      return { success: false, error: 'Logout failed' };
-    }
-  }
-}
-
-module.exports = new AuthService();
-=======
 import supabaseConfig from '../supabase-config.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
@@ -437,7 +9,7 @@ class AuthService {
 
   // Register new user
   async register(userData) {
-    const { email, password, fullName, phoneNumber } = userData;
+    const { email, password, fullName, phoneNumber, googleId, profilePicture, isGoogleUser } = userData;
 
     try {
       // Check if Supabase is configured
@@ -479,79 +51,90 @@ class AuthService {
           .single();
 
         if (existingPhone) {
-          return { success: false, error: 'Phone number already registered' };
+          return { success: false, error: 'User already exists with this phone number' };
         }
       }
 
-      // Hash password
-      const saltRounds = 12;
-      const hashedPassword = await bcrypt.hash(password, saltRounds);
+      let hashedPassword = null;
+      let authUser = null;
 
-      // Create user in Supabase Auth
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            full_name: fullName
-          }
+      // Handle password hashing and Supabase auth for non-Google users
+      if (!isGoogleUser && password) {
+        // Hash password
+        hashedPassword = await bcrypt.hash(password, 12);
+
+        // Create user in Supabase Auth
+        const { data: authData, error: authError } = await adminSupabase.auth.admin.createUser({
+          email,
+          password,
+          email_confirm: true
+        });
+
+        if (authError) {
+          console.error('Supabase auth error:', authError);
+          return { success: false, error: 'Failed to create user account' };
         }
-      });
 
-      if (authError) {
-        return { success: false, error: authError.message };
+        authUser = authData.user;
       }
 
       // Create user profile
-      const { data: profileData, error: profileError } = await supabase
+      const profileData = {
+        email,
+        full_name: fullName,
+        phone: phoneNumber || null,
+        role: 'user',
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+
+      // Add Google-specific fields if it's a Google user
+      if (isGoogleUser) {
+        profileData.google_id = googleId;
+        profileData.profile_picture = profilePicture;
+        profileData.is_google_user = true;
+      } else {
+        profileData.auth_user_id = authUser?.id;
+        profileData.password_hash = hashedPassword;
+      }
+
+      const { data: profile, error: profileError } = await supabase
         .from('user_profiles')
-        .insert([
-          {
-            id: authData.user.id,
-            email,
-            full_name: fullName,
-            phone: phoneNumber,
-            is_phone_verified: true,
-            password_hash: hashedPassword,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-            is_active: true,
-            role: 'user'
-          }
-        ])
+        .insert([profileData])
         .select()
         .single();
 
       if (profileError) {
-        // Clean up auth user if profile creation fails
-        if (adminSupabase) {
-          await adminSupabase.auth.admin.deleteUser(authData.user.id);
+        console.error('Profile creation error:', profileError);
+        
+        // If profile creation fails and we created an auth user, clean up
+        if (authUser) {
+          await adminSupabase.auth.admin.deleteUser(authUser.id);
         }
-        return { success: false, error: profileError.message };
+        
+        return { success: false, error: 'Failed to create user profile' };
       }
 
-      return {
-        success: true,
-        message: 'User registered successfully',
+      return { 
+        success: true, 
         user: {
-          id: profileData.id,
-          email: profileData.email,
-          fullName: profileData.full_name,
-          phoneNumber: profileData.phone,
-          isPhoneVerified: profileData.is_phone_verified,
-          role: profileData.role
+          id: profile.id,
+          email: profile.email,
+          fullName: profile.full_name,
+          phone: profile.phone,
+          role: profile.role
         }
       };
-
     } catch (error) {
       console.error('Registration error:', error);
-      return { success: false, error: 'Registration failed. Please try again.' };
+      return { success: false, error: 'Registration failed' };
     }
   }
 
   // Login user
   async login(email, password) {
     try {
+      // Check if Supabase is configured
       if (!supabaseConfig.isConfigured()) {
         return { 
           success: false, 
@@ -559,32 +142,12 @@ class AuthService {
         };
       }
 
-      // Get client dynamically
       const supabase = supabaseConfig.getClient();
-
       if (!supabase) {
         return { 
           success: false, 
           error: 'Database connection not available. Please contact administrator.' 
         };
-      }
-
-      // Get user profile
-      const { data: userProfile, error: profileError } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .eq('email', email)
-        .eq('is_active', true)
-        .single();
-
-      if (profileError || !userProfile) {
-        return { success: false, error: 'Invalid email or password' };
-      }
-
-      // Verify password
-      const isValidPassword = await bcrypt.compare(password, userProfile.password_hash);
-      if (!isValidPassword) {
-        return { success: false, error: 'Invalid email or password' };
       }
 
       // Sign in with Supabase Auth
@@ -594,68 +157,88 @@ class AuthService {
       });
 
       if (authError) {
-        return { success: false, error: authError.message };
+        console.error('Login error:', authError);
+        return { success: false, error: 'Invalid email or password' };
+      }
+
+      // Get user profile
+      const { data: profile, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('*')
+        .eq('email', email)
+        .single();
+
+      if (profileError || !profile) {
+        console.error('Profile fetch error:', profileError);
+        return { success: false, error: 'User profile not found' };
       }
 
       // Generate JWT token
-      const token = jwt.sign(
-        { 
-          userId: userProfile.id, 
-          email: userProfile.email,
-          role: userProfile.role 
-        },
-        process.env.JWT_SECRET || 'your-jwt-secret',
-        { expiresIn: '24h' }
-      );
-
-      // Update last login
-      await supabase
-        .from('user_profiles')
-        .update({ last_login: new Date().toISOString() })
-        .eq('id', userProfile.id);
+      const token = this.generateToken({
+        id: profile.id,
+        email: profile.email,
+        role: profile.role
+      });
 
       return {
         success: true,
-        message: 'Login successful',
         token,
         user: {
-          id: userProfile.id,
-          email: userProfile.email,
-          fullName: userProfile.full_name,
-          role: userProfile.role
+          id: profile.id,
+          email: profile.email,
+          fullName: profile.full_name,
+          phone: profile.phone,
+          role: profile.role,
+          profilePicture: profile.profile_picture
         }
       };
-
     } catch (error) {
       console.error('Login error:', error);
-      return { success: false, error: 'Login failed. Please try again.' };
+      return { success: false, error: 'Login failed' };
     }
   }
 
   // Get user profile
   async getUserProfile(userId) {
     try {
-      const supabase = supabaseConfig.getClient();
-
-      if (!supabase) {
-        return { success: false, error: 'Database connection not available' };
+      if (!supabaseConfig.isConfigured()) {
+        return { 
+          success: false, 
+          error: 'Database not configured. Please contact administrator.' 
+        };
       }
 
-      const { data: userProfile, error } = await supabase
+      const supabase = supabaseConfig.getClient();
+      if (!supabase) {
+        return { 
+          success: false, 
+          error: 'Database connection not available. Please contact administrator.' 
+        };
+      }
+
+      const { data: profile, error } = await supabase
         .from('user_profiles')
-        .select('id, email, full_name, role, created_at, last_login, is_active')
+        .select('*')
         .eq('id', userId)
         .single();
 
-      if (error) {
-        return { success: false, error: error.message };
+      if (error || !profile) {
+        console.error('Profile fetch error:', error);
+        return { success: false, error: 'User profile not found' };
       }
 
       return {
         success: true,
-        user: userProfile
+        user: {
+          id: profile.id,
+          email: profile.email,
+          fullName: profile.full_name,
+          phone: profile.phone,
+          role: profile.role,
+          profilePicture: profile.profile_picture,
+          isGoogleUser: profile.is_google_user
+        }
       };
-
     } catch (error) {
       console.error('Get profile error:', error);
       return { success: false, error: 'Failed to get user profile' };
@@ -665,16 +248,170 @@ class AuthService {
   // Update user profile
   async updateProfile(userId, updateData) {
     try {
-      const supabase = supabaseConfig.getClient();
-
-      if (!supabase) {
-        return { success: false, error: 'Database connection not available' };
+      if (!supabaseConfig.isConfigured()) {
+        return { 
+          success: false, 
+          error: 'Database not configured. Please contact administrator.' 
+        };
       }
 
-      const { data: updatedProfile, error } = await supabase
+      const supabase = supabaseConfig.getClient();
+      if (!supabase) {
+        return { 
+          success: false, 
+          error: 'Database connection not available. Please contact administrator.' 
+        };
+      }
+
+      const allowedFields = ['full_name', 'phone', 'profile_picture'];
+      const filteredData = {};
+      
+      Object.keys(updateData).forEach(key => {
+        if (allowedFields.includes(key)) {
+          filteredData[key] = updateData[key];
+        }
+      });
+
+      filteredData.updated_at = new Date().toISOString();
+
+      const { data: profile, error } = await supabase
         .from('user_profiles')
-        .update({
-          ...updateData,
+        .update(filteredData)
+        .eq('id', userId)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Profile update error:', error);
+        return { success: false, error: 'Failed to update profile' };
+      }
+
+      return {
+        success: true,
+        user: {
+          id: profile.id,
+          email: profile.email,
+          fullName: profile.full_name,
+          phone: profile.phone,
+          role: profile.role,
+          profilePicture: profile.profile_picture
+        }
+      };
+    } catch (error) {
+      console.error('Update profile error:', error);
+      return { success: false, error: 'Failed to update profile' };
+    }
+  }
+
+  // Change password
+  async changePassword(userId, currentPassword, newPassword) {
+    try {
+      if (!supabaseConfig.isConfigured()) {
+        return { 
+          success: false, 
+          error: 'Database not configured. Please contact administrator.' 
+        };
+      }
+
+      const supabase = supabaseConfig.getClient();
+      const adminSupabase = supabaseConfig.getAdminClient();
+      
+      if (!supabase || !adminSupabase) {
+        return { 
+          success: false, 
+          error: 'Database connection not available. Please contact administrator.' 
+        };
+      }
+
+      // Get user profile to get email
+      const { data: profile, error: profileError } = await supabase
+        .from('user_profiles')
+        .select('email, auth_user_id')
+        .eq('id', userId)
+        .single();
+
+      if (profileError || !profile) {
+        return { success: false, error: 'User not found' };
+      }
+
+      // Verify current password by attempting to sign in
+      const { error: verifyError } = await supabase.auth.signInWithPassword({
+        email: profile.email,
+        password: currentPassword
+      });
+
+      if (verifyError) {
+        return { success: false, error: 'Current password is incorrect' };
+      }
+
+      // Update password in Supabase Auth
+      if (profile.auth_user_id) {
+        const { error: updateError } = await adminSupabase.auth.admin.updateUserById(
+          profile.auth_user_id,
+          { password: newPassword }
+        );
+
+        if (updateError) {
+          console.error('Password update error:', updateError);
+          return { success: false, error: 'Failed to update password' };
+        }
+      }
+
+      // Hash and store new password in user_profiles
+      const hashedPassword = await bcrypt.hash(newPassword, 12);
+      const { error: profileUpdateError } = await supabase
+        .from('user_profiles')
+        .update({ 
+          password_hash: hashedPassword,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', userId);
+
+      if (profileUpdateError) {
+        console.error('Profile password update error:', profileUpdateError);
+        return { success: false, error: 'Failed to update password' };
+      }
+
+      return { success: true, message: 'Password updated successfully' };
+    } catch (error) {
+      console.error('Change password error:', error);
+      return { success: false, error: 'Failed to change password' };
+    }
+  }
+
+  // Verify JWT token
+  verifyToken(token) {
+    try {
+      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-jwt-secret');
+      return { success: true, user: decoded };
+    } catch (error) {
+      console.error('Token verification error:', error);
+      return { success: false, error: 'Invalid token' };
+    }
+  }
+
+  // Update phone verification status
+  async updatePhoneVerificationStatus(userId, isVerified) {
+    try {
+      if (!supabaseConfig.isConfigured()) {
+        return { 
+          success: false, 
+          error: 'Database not configured. Please contact administrator.' 
+        };
+      }
+
+      const supabase = supabaseConfig.getClient();
+      if (!supabase) {
+        return { 
+          success: false, 
+          error: 'Database connection not available. Please contact administrator.' 
+        };
+      }
+
+      const { data, error } = await supabase
+        .from('user_profiles')
+        .update({ 
+          phone_verified: isVerified,
           updated_at: new Date().toISOString()
         })
         .eq('id', userId)
@@ -682,177 +419,58 @@ class AuthService {
         .single();
 
       if (error) {
-        return { success: false, error: error.message };
+        console.error('Phone verification update error:', error);
+        return { success: false, error: 'Failed to update phone verification status' };
       }
 
-      return {
-        success: true,
-        message: 'Profile updated successfully',
-        user: updatedProfile
-      };
-
-    } catch (error) {
-      console.error('Update profile error:', error);
-      return { success: false, error: 'Failed to update profile' };
-    }
-  }
-
-  // Logout user
-  async logout() {
-    try {
-      const supabase = supabaseConfig.getClient();
-
-      if (!supabase) {
-        return { success: false, error: 'Database connection not available' };
-      }
-
-      const { error } = await supabase.auth.signOut();
-      if (error) {
-        return { success: false, error: error.message };
-      }
-
-      return { success: true, message: 'Logged out successfully' };
-    } catch (error) {
-      console.error('Logout error:', error);
-      return { success: false, error: 'Logout failed' };
-    }
-  }
-
-  // Phone authentication methods
-
-  // Find user by phone number
-  async findUserByPhone(phoneNumber) {
-    try {
-      const supabase = supabaseConfig.getClient();
-
-      if (!supabase) {
-        return null;
-      }
-
-      const { data: userProfile, error } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .eq('phone', phoneNumber)
-        .eq('is_active', true)
-        .single();
-
-      if (error || !userProfile) {
-        return null;
-      }
-
-      return userProfile;
-
-    } catch (error) {
-      console.error('Find user by phone error:', error);
-      return null;
-    }
-  }
-
-  // Create user with phone number
-  async createUserWithPhone(userData) {
-    try {
-      const supabase = supabaseConfig.getClient();
-
-      if (!supabase) {
-        return { success: false, error: 'Database connection not available' };
-      }
-
-      // Generate a unique email for phone-only users
-      const uniqueEmail = `${userData.phone}@phone.kiani.exchange`;
-
-      // Create user profile
-      const { data: profileData, error: profileError } = await supabase
-        .from('user_profiles')
-        .insert([
-          {
-            email: uniqueEmail,
-            phone: userData.phone,
-            full_name: userData.fullName,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-            is_active: true,
-            is_phone_verified: userData.isPhoneVerified || false,
-            role: 'user'
-          }
-        ])
-        .select()
-        .single();
-
-      if (profileError) {
-        return { success: false, error: profileError.message };
-      }
-
-      return {
-        success: true,
-        message: 'User created successfully',
-        user: profileData
-      };
-
-    } catch (error) {
-      console.error('Create user with phone error:', error);
-      return { success: false, error: 'Failed to create user' };
-    }
-  }
-
-  // Update phone verification status
-  async updatePhoneVerification(userId, isVerified) {
-    try {
-      const supabase = supabaseConfig.getClient();
-
-      if (!supabase) {
-        return { success: false, error: 'Database connection not available' };
-      }
-
-      const { error } = await supabase
-        .from('user_profiles')
-        .update({
-          is_phone_verified: isVerified,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', userId);
-
-      if (error) {
-        return { success: false, error: error.message };
-      }
-
-      return { success: true, message: 'Phone verification status updated' };
-
+      return { success: true, user: data };
     } catch (error) {
       console.error('Update phone verification error:', error);
-      return { success: false, error: 'Failed to update phone verification' };
+      return { success: false, error: 'Failed to update phone verification status' };
     }
   }
 
   // Find user by email
   async findUserByEmail(email) {
     try {
-      const supabase = supabaseConfig.getClient();
-
-      if (!supabase) {
-        return { success: false, error: 'Database connection not available' };
+      if (!supabaseConfig.isConfigured()) {
+        return { 
+          success: false, 
+          error: 'Database not configured. Please contact administrator.' 
+        };
       }
 
-      const { data: userProfile, error } = await supabase
+      const supabase = supabaseConfig.getClient();
+      if (!supabase) {
+        return { 
+          success: false, 
+          error: 'Database connection not available. Please contact administrator.' 
+        };
+      }
+
+      const { data: profile, error } = await supabase
         .from('user_profiles')
         .select('*')
         .eq('email', email)
         .single();
 
-      if (error) {
+      if (error || !profile) {
         return { success: false, error: 'User not found' };
       }
 
       return {
         success: true,
         user: {
-          id: userProfile.id,
-          email: userProfile.email,
-          fullName: userProfile.full_name,
-          role: userProfile.role,
-          isGoogleUser: userProfile.is_google_user || false
+          id: profile.id,
+          email: profile.email,
+          fullName: profile.full_name,
+          phone: profile.phone,
+          role: profile.role,
+          profilePicture: profile.profile_picture,
+          isGoogleUser: profile.is_google_user,
+          googleId: profile.google_id
         }
       };
-
     } catch (error) {
       console.error('Find user by email error:', error);
       return { success: false, error: 'Failed to find user' };
@@ -860,16 +478,30 @@ class AuthService {
   }
 
   // Generate JWT token
-  async generateToken(user) {
+  generateToken(payload) {
     return jwt.sign(
       { 
-        userId: user.id,
-        email: user.email,
-        role: user.role || 'user'
+        id: payload.id, 
+        email: payload.email, 
+        role: payload.role 
       },
       process.env.JWT_SECRET || 'your-jwt-secret',
       { expiresIn: '24h' }
     );
+  }
+
+  // Logout user
+  async logout() {
+    try {
+      const supabase = supabaseConfig.getClient();
+      if (supabase) {
+        await supabase.auth.signOut();
+      }
+      return { success: true, message: 'Logged out successfully' };
+    } catch (error) {
+      console.error('Logout error:', error);
+      return { success: false, error: 'Logout failed' };
+    }
   }
 }
 
