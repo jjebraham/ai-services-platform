@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from './AuthContext';
 import { useLanguage } from './LanguageContext';
-import { authAPI } from './services/apiClient';
+import { authAPI } from '../apiClient';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
@@ -45,9 +45,29 @@ function LoginPage() {
     setApiError('');
     
     try {
-      await login(data.email, data.password);
-      navigate('/dashboard');
+      // Make direct API call to test
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: data.email,
+          password: data.password
+        })
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        // Store user data and redirect
+        await login(data.email, data.password);
+        navigate('/dashboard');
+      } else {
+        setApiError(result.error || 'Login failed');
+      }
     } catch (err) {
+      console.error('Login error:', err);
       setApiError(err.message || 'Login failed');
     } finally {
       setIsLoading(false);
