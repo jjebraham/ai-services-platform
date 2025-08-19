@@ -5,199 +5,75 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const compression = require('compression');
 const cookieParser = require('cookie-parser');
-const session = require('express-session');
-const MongoStore = require('connect-mongo');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
 
-// Import database connection
-const connectDB = require('./database');
-
-// Import models to ensure they're registered
-require('./User');
-require('./AIService');
-require('./Order');
-require('./SupportTicket');
-require('./Notification');
-require('./Settings');
-require('./CMSPage');
-
-// Import middleware
 const { errorHandler } = require('./errorHandler');
 const { notFound } = require('./notFound');
-
-// Import routes
 const authRoutes = require('./routes/auth-routes');
-const orderRoutes = require('./routes/orders');
-const adminRoutes = require('./routes/admin-routes');
-const otpRoutes = require('./routes/otp-routes');
-
-// Import utilities
-const { initializeApp } = require('./initialize');
 
 const app = express();
 
-// Connect to database
-connectDB();
+console.log('Database: Using Supabase for authentication');
 
-// Trust proxy for rate limiting and security
+// Trust proxy
 app.set('trust proxy', 1);
 
-// Security middleware
-app.use(helmet({
-  crossOriginEmbedderPolicy: false,
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-      fontSrc: ["'self'", "https://fonts.gstatic.com"],
-      imgSrc: ["'self'", "data:", "https:"],
-      scriptSrc: ["'self'"],
-      connectSrc: ["'self'", "https://api.stripe.com"],
-      frameSrc: ["'self'", "https://js.stripe.com"]
-    }
-  }
+// 1. CORS first
+app.use(cors({
+  origin: ['https://kiani.exchange', 'https://www.kiani.exchange', 'http://localhost:3000'],
+  credentials: true
 }));
 
-// CORS configuration
-const corsOptions = {
-  origin: function (origin, callback) {
-    const allowedOrigins = [
-      process.env.FRONTEND_URL || 'http://localhost:3000',
-      'http://localhost:3000',
-      'http://localhost:3001',
-      'http://localhost:5173',
-      'http://localhost:5174' // Vite dev server
-    ];
-    
-    // Allow requests with no origin (mobile apps, Postman, etc.)
-    if (!origin) return callback(null, true);
-    
-    if (allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
-};
+// 2. Security Headers with minimal CSP (to avoid syntax errors)
+app.use(helmet({
+  crossOriginEmbedderPolicy: false,
+  contentSecurityPolicy: false
+}));
 
-app.use(cors(corsOptions));
-
-// Rate limiting
-const limiter = rateLimit({
-  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutes
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100, // limit each IP to 100 requests per windowMs
-  message: {
-    error: 'Too many requests from this IP, please try again later.'
-  },
-  standardHeaders: true,
-  legacyHeaders: false
-});
-
-app.use('/api/', limiter);
-
-// Body parsing middleware
-app.use(express.json({ limit: '10mb' }));
+// 3. BODY PARSING (MUST be before rate limiter!)
+app.use(express.json({ 
+  type: ['application/json', 'application/*+json', 'text/plain'], 
+  limit: '10mb' 
+}));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
 
-// Compression middleware
-app.use(compression());
-
-// Logging middleware
-if (process.env.NODE_ENV === 'development') {
-  app.use(morgan('dev'));
-} else {
-  app.use(morgan('combined'));
-}
-
-// Session configuration
-app.use(session({
-  secret: process.env.SESSION_SECRET || 'your-session-secret',
-  resave: false,
-  saveUninitialized: false,
-  store: MongoStore.create({
-    mongoUrl: process.env.MONGODB_URI || 'mongodb://localhost:27017/ai-services-platform'
-  }),
-  cookie: {
-    secure: process.env.NODE_ENV === 'production',
-    httpOnly: true,
-    maxAge: parseInt(process.env.SESSION_COOKIE_MAX_AGE) || 24 * 60 * 60 * 1000 // 24 hours
-  }
+// 4. Rate limiting (AFTER body parsing)
+app.use('/api/', rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 100,
+  message: { error: 'Too many requests' }
 }));
 
-// Serve static files
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// 5. Logging
+app.use(compression());
+app.use(morgan('combined'));
 
-// Health check endpoint
-app.get('/health', (req, res) => {
-  res.status(200).json({
-    status: 'OK',
-    timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
-    environment: process.env.NODE_ENV || 'development'
-  });
+// 6. API Routes (Post body is parsed!)
+app.use('/api/auth', authRoutes);
+
+// 7. Back-compat redirects for old auth paths
+app.get(['/auth/login', '/auth/register'], (req, res) => {
+  res.redirect(301, req.path.replace('/auth/', '/'));
 });
 
-// API routes
-app.use('/api/auth', authRoutes);
-app.use('/api/orders', orderRoutes);
-app.use('/api/admin', adminRoutes);
-app.use('/api/otp', otpRoutes);
-
-// Serve frontend in production
+// 8. Frontend serving
 if (process.env.NODE_ENV === 'production') {
   app.use(express.static(path.join(__dirname, 'dist')));
-  
   app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, 'dist/index.html'));
   });
 }
 
-// Error handling middleware
+// 9. Error handling (AFTER routes)
 app.use(notFound);
 app.use(errorHandler);
 
-const PORT = process.env.PORT || 5000;
-const HOST = process.env.HOST || '0.0.0.0';
+// Bind to ALL interfaces (CRITICAL!)
+const PORT = process.env.PORT || 3000;
+const HOST = '0.0.0.0';
 
-const server = app.listen(PORT, HOST, async () => {
-  console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on http://${HOST}:${PORT}`);
-  
-  // Initialize application data
-  try {
-    await initializeApp();
-    console.log('Application initialized successfully');
-  } catch (error) {
-    console.error('Failed to initialize application:', error);
-  }
+app.listen(PORT, HOST, () => {
+  console.log('Server running at http://' + HOST + ':' + PORT);
 });
-
-// Handle unhandled promise rejections
-process.on('unhandledRejection', (err, promise) => {
-  console.log(`Error: ${err.message}`);
-  // Close server & exit process
-  server.close(() => {
-    process.exit(1);
-  });
-});
-
-// Handle uncaught exceptions
-process.on('uncaughtException', (err) => {
-  console.log(`Error: ${err.message}`);
-  process.exit(1);
-});
-
-// Graceful shutdown
-process.on('SIGTERM', () => {
-  console.log('SIGTERM received. Shutting down gracefully...');
-  server.close(() => {
-    console.log('Process terminated');
-  });
-});
-
-module.exports = app;
-

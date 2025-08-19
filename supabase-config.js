@@ -1,5 +1,5 @@
 // Supabase Configuration
-import { createClient } from '@supabase/supabase-js';
+const { createClient } = require('@supabase/supabase-js');
 
 class SupabaseConfig {
   constructor() {
@@ -77,7 +77,7 @@ class SupabaseConfig {
 
     try {
       const { data, error } = await this.client
-        .from('users')
+        .from('user_profiles')
         .select('count')
         .limit(1);
 
@@ -119,7 +119,7 @@ class SupabaseConfig {
 
       // Check if users table exists (though it might be managed by Supabase Auth)
       const { error: usersError } = await this.adminClient
-        .from('users')
+        .from('user_profiles')
         .select('id')
         .limit(1);
 
@@ -135,4 +135,4 @@ class SupabaseConfig {
   }
 }
 
-export default new SupabaseConfig();
+module.exports = new SupabaseConfig();

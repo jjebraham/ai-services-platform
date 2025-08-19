@@ -1,9 +1,9 @@
-import express from 'express';
+const express = require('express');
 const router = express.Router();
-import authService from '../services/auth-service.js';
-import supabaseConfig from '../supabase-config.js';
-import passport from 'passport';
-import { OAuth2Client } from 'google-auth-library';
+const authService = require('../services/auth-service.js');
+const supabaseConfig = require('../supabase-config.js');
+const passport = require('passport');
+const { OAuth2Client } = require('google-auth-library');
 
 // Initialize Google OAuth client
 const googleClient = new OAuth2Client(
@@ -15,13 +15,16 @@ const googleClient = new OAuth2Client(
 // Register route
 router.post('/register', async (req, res) => {
   try {
-    const { firstName, lastName, email, password } = req.body;
+    // Accept both {firstName,lastName} or {fullName}
+    const { firstName, lastName, fullName: incomingFullName, email, password } = req.body || {};
 
     // Validation
-    if (!firstName || !lastName || !email || !password) {
+    const fullName = incomingFullName || [firstName, lastName].filter(Boolean).join(' ').trim();
+
+    if (!fullName || !email || !password) {
       return res.status(400).json({
         success: false,
-        error: 'All fields are required'
+        error: 'Full name, email and password are required'
       });
     }
 
@@ -32,7 +35,6 @@ router.post('/register', async (req, res) => {
       });
     }
 
-    const fullName = `${firstName} ${lastName}`;
     const result = await authService.register({ 
       email, 
       password, 
@@ -241,67 +243,7 @@ router.put('/profile', async (req, res) => {
   }
 });
 
-// Google OAuth login route
-router.post('/google', async (req, res) => {
-  try {
-    const { credential } = req.body;
 
-    if (!credential) {
-      return res.status(400).json({
-        success: false,
-        error: 'Google credential is required'
-      });
-    }
-
-    // Verify the Google token
-    const ticket = await googleClient.verifyIdToken({
-      idToken: credential,
-      audience: process.env.GOOGLE_CLIENT_ID
-    });
-
-    const payload = ticket.getPayload();
-    const { sub: googleId, email, name, picture } = payload;
-
-    if (!email) {
-      return res.status(400).json({
-        success: false,
-        error: 'Email not provided by Google'
-      });
-    }
-
-    const result = await authService.googleLogin({
-      googleId,
-      email,
-      fullName: name,
-      picture
-    });
-
-    if (result.success) {
-      // Set HTTP-only cookie with JWT token
-      res.cookie('token', result.token, {
-        httpOnly: true,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict',
-        maxAge: 24 * 60 * 60 * 1000 // 24 hours
-      });
-
-      res.json({
-        success: true,
-        message: result.message,
-        user: result.user
-      });
-    } else {
-      res.status(400).json(result);
-    }
-
-  } catch (error) {
-    console.error('Google OAuth error:', error);
-    res.status(500).json({
-      success: false,
-      error: 'Google authentication failed'
-    });
-  }
-});
 
 // Check authentication status
 router.get('/status', async (req, res) => {
@@ -457,4 +399,93 @@ router.post('/verify-otp', async (req, res) => {
   }
 });
 
-export default router;
+// Email verification routes
+
+// Verify email with code
+router.post('/verify-email', async (req, res) => {
+  try {
+    const { email, code } = req.body;
+
+    if (!email || !code) {
+      return res.status(400).json({
+        success: false,
+        error: 'Email and verification code are required'
+      });
+    }
+
+    const result = await authService.verifyEmail(email, code);
+    
+    if (result.success) {
+      res.status(200).json(result);
+    } else {
+      res.status(400).json(result);
+    }
+
+  } catch (error) {
+    console.error('Email verification route error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error'
+    });
+  }
+});
+
+// Verify email with token (link-based verification)
+router.get('/verify-email/:token', async (req, res) => {
+  try {
+    const { token } = req.params;
+
+    if (!token) {
+      return res.status(400).json({
+        success: false,
+        error: 'Verification token is required'
+      });
+    }
+
+    const result = await authService.verifyEmailToken(token);
+    
+    if (result.success) {
+      res.status(200).json(result);
+    } else {
+      res.status(400).json(result);
+    }
+
+  } catch (error) {
+    console.error('Email verification token route error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error'
+    });
+  }
+});
+
+// Resend verification code
+router.post('/resend-verification', async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        error: 'Email is required'
+      });
+    }
+
+    const result = await authService.resendVerificationCode(email);
+    
+    if (result.success) {
+      res.status(200).json(result);
+    } else {
+      res.status(400).json(result);
+    }
+
+  } catch (error) {
+    console.error('Resend verification route error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error'
+    });
+  }
+});
+
+module.exports = router;
