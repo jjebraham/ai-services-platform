@@ -54,22 +54,24 @@ function App() {
                 <Route path="/basket" element={<BasketPage />} />
             
             {/* Public Routes (when not authenticated) */}
-            <Route 
-              path="/login" 
+            <Route
+              path="/login"
               element={
                 <PublicRoute>
                   <LoginPage />
                 </PublicRoute>
-              } 
+              }
             />
-            <Route 
-              path="/register" 
+            <Route path="/auth/login" element={<Navigate to="/login" replace />} />
+            <Route
+              path="/register"
               element={
                 <PublicRoute>
                   <RegisterPage />
                 </PublicRoute>
-              } 
+              }
             />
+            <Route path="/auth/register" element={<Navigate to="/register" replace />} />
             
             {/* Protected Routes (require authentication) */}
             <Route 
