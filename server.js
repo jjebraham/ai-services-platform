@@ -25,10 +25,36 @@ app.use(cors({
   credentials: true
 }));
 
-// 2. Security Headers with minimal CSP (to avoid syntax errors)
+// 2. Security Headers with CSP allowing Supabase and required providers
 app.use(helmet({
   crossOriginEmbedderPolicy: false,
-  contentSecurityPolicy: false
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
+      imgSrc: ["'self'", "data:", "https:"],
+      scriptSrc: [
+        "'self'",
+        "https://accounts.google.com",
+        "https://apis.google.com",
+        "https://js.stripe.com"
+      ],
+      connectSrc: [
+        "'self'",
+        "https://api.stripe.com",
+        "https://accounts.google.com",
+        "https://apis.google.com",
+        "https://*.supabase.co",
+        "wss://*.supabase.co"
+      ],
+      frameSrc: [
+        "'self'",
+        "https://js.stripe.com",
+        "https://accounts.google.com"
+      ]
+    }
+  }
 }));
 
 // 3. BODY PARSING (MUST be before rate limiter!)
