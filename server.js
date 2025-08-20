@@ -16,90 +16,128 @@ const app = express();
 
 console.log('Database: Using Supabase for authentication');
 
-// Trust proxy
+// Trust proxy (required when running behind Cloudflare/Nginx)
 app.set('trust proxy', 1);
 
-// 1. CORS first
-app.use(cors({
-  origin: ['https://kiani.exchange', 'https://www.kiani.exchange', 'http://localhost:3000'],
-  credentials: true
-}));
+// 1) CORS
+const allowedOrigins = [
+  process.env.FRONTEND_URL || 'https://kiani.exchange',
+  'https://www.kiani.exchange',
+  'http://localhost:3000',
+  'http://localhost:5173',
+  'http://localhost:5174',
+];
+app.use(
+  cors({
+    origin: (origin, cb) => {
+      if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+      return cb(null, true);
+    },
+    credentials: true,
+  })
+);
 
-// 2. Security Headers with CSP allowing Supabase and required providers
-app.use(helmet({
-  crossOriginEmbedderPolicy: false,
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
-      fontSrc: ["'self'", "https://fonts.gstatic.com"],
-      imgSrc: ["'self'", "data:", "https:"],
-      scriptSrc: [
-        "'self'",
-        "https://accounts.google.com",
-        "https://apis.google.com",
-        "https://js.stripe.com"
-      ],
-      connectSrc: [
-        "'self'",
-        "https://api.stripe.com",
-        "https://accounts.google.com",
-        "https://apis.google.com",
-        "https://*.supabase.co",
-        "wss://*.supabase.co"
-      ],
-      frameSrc: [
-        "'self'",
-        "https://js.stripe.com",
-        "https://accounts.google.com"
-      ]
-    }
-  }
-}));
+// 2) Security headers (CSP allows Supabase + Google + Stripe)
+app.use(
+  helmet({
+    crossOriginEmbedderPolicy: false,
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+        fontSrc: ["'self'", 'https://fonts.gstatic.com'],
+        imgSrc: ["'self'", 'data:', 'https:'],
+        scriptSrc: [
+          "'self'",
+          'https://accounts.google.com',
+          'https://apis.google.com',
+          'https://js.stripe.com',
+        ],
+        connectSrc: [
+          "'self'",
+          'https://api.stripe.com',
+          'https://accounts.google.com',
+          'https://apis.google.com',
+          'https://*.supabase.co',
+          'wss://*.supabase.co',
+        ],
+        frameSrc: ["'self'", 'https://js.stripe.com', 'https://accounts.google.com'],
+      },
+    },
+  })
+);
 
-// 3. BODY PARSING (MUST be before rate limiter!)
-app.use(express.json({ 
-  type: ['application/json', 'application/*+json', 'text/plain'], 
-  limit: '10mb' 
-}));
+// 3) Body parsing (must be before rate limiter)
+app.use(
+  express.json({
+    type: ['application/json', 'application/*+json', 'text/plain'],
+    limit: '10mb',
+    strict: false,
+  })
+);
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(cookieParser());
 
-// 4. Rate limiting (AFTER body parsing)
-app.use('/api/', rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100,
-  message: { error: 'Too many requests' }
-}));
-
-// 5. Logging
-app.use(compression());
-app.use(morgan('combined'));
-
-// 6. API Routes (Post body is parsed!)
-app.use('/api/auth', authRoutes);
-
-// 7. Back-compat redirects for old auth paths
-app.get(['/auth/login', '/auth/register'], (req, res) => {
-  res.redirect(301, req.path.replace('/auth/', '/'));
+// Normalize string bodies (fixes cases where body is a JSON string or quoted email)
+app.use((req, _res, next) => {
+  if (typeof req.body === 'string') {
+    const raw = req.body;
+    try {
+      req.body = JSON.parse(raw);
+    } catch {
+      const m = raw.match(/^"(.+@.+)"$/);
+      if (m) req.body = { email: m[1] };
+    }
+  }
+  next();
 });
 
-// 8. Frontend serving
+// 4) Rate limiting (after parsing)
+app.use(
+  '/api/',
+  rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 100,
+    message: { error: 'Too many requests' },
+    standardHeaders: true,
+    legacyHeaders: false,
+  })
+);
+
+// 5) Logging + compression
+app.use(compression());
+app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
+
+// 6) API routes
+app.use('/api/auth', authRoutes);
+
+// 7) Serve authentication pages
+app.get(['/auth', '/auth/login', '/auth/register'], (req, res) => {
+  res.sendFile(path.join(__dirname, 'public/auth/index.html'));
+});
+
+app.get('/dashboard', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public/auth/dashboard.html'));
+});
+
+// 8) Static frontend in production
 if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, 'dist')));
-  app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, 'dist/index.html'));
+  const distPath = path.join(__dirname, 'dist');
+  app.use(express.static(distPath));
+  app.get('*', (_req, res) => {
+    res.sendFile(path.join(distPath, 'index.html'));
   });
 }
 
-// 9. Error handling (AFTER routes)
+// 9) Error handling
 app.use(notFound);
 app.use(errorHandler);
 
-// Bind to ALL interfaces (CRITICAL!)
+// Start server
 const PORT = process.env.PORT || 3000;
-const HOST = '0.0.0.0';
+const HOST = process.env.HOST || '0.0.0.0';
 
 app.listen(PORT, HOST, () => {
-  console.log('Server running at http://' + HOST + ':' + PORT);
+  console.log(`Server running at http://${HOST}:${PORT}`);
 });
+
