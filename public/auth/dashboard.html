@@ -1,6 +1,24 @@
 <!DOCTYPE html>
-<html lang=" en\>
-<head><meta charset=" UTF-8\><meta name=\viewport\ content=\width=device-width initial-scale=1.0\><title>Dashboard - AI Services Platform</title><script src=\https://unpkg.com/@supabase/supabase-js@2\></script></head>
-<body>
-<h1>Welcome to Dashboard</h1>
-</body></html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard - AI Services Platform</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-gray-50 flex items-center justify-center">
+  <div class="text-center space-y-4">
+    <h1 class="text-3xl font-bold">Welcome to Dashboard</h1>
+    <button id="logoutBtn" class="bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700">Logout</button>
+  </div>
+  <script>
+    document.getElementById('logoutBtn').addEventListener('click', async () => {
+      try {
+        await fetch('/api/auth/logout', { method: 'POST' });
+      } finally {
+        window.location.href = 'login.html';
+      }
+    });
+  </script>
+</body>
+</html>
