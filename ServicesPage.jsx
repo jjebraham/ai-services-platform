@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from './AuthContext';
 import { useLanguage } from './LanguageContext';
+import { useBasket } from './BasketContext';
 import { llmServices } from './llmData';
 
 function ServicesPage() {
@@ -12,7 +13,7 @@ function ServicesPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [sortBy, setSortBy] = useState('name');
   const [exchangeRate, setExchangeRate] = useState(null);
-  const [basket, setBasket] = useState([]);
+  const { addToBasket } = useBasket();
 
   const sortOptions = [
     { value: 'name', label: t('sortByName') },
@@ -45,7 +46,7 @@ function ServicesPage() {
         pros: service.pros[lang] || service.pros.en || service.pros || [],
         bestFor: service.bestFor[lang] || service.bestFor.en || service.bestFor || '',
         provider: service.provider[lang] || service.provider.en || service.provider,
-        responseTime: service.responseTime[lang] || service.responseTime.en || service.responseTime,
+
         image: service.icon
       }));
       
@@ -68,7 +69,7 @@ function ServicesPage() {
         pros: service.pros[lang] || service.pros.en || service.pros || [],
         bestFor: service.bestFor[lang] || service.bestFor.en || service.bestFor || '',
         provider: service.provider[lang] || service.provider.en || service.provider,
-        responseTime: service.responseTime[lang] || service.responseTime.en || service.responseTime,
+
         image: service.icon
       }));
       setServices(transformedServices);
@@ -120,13 +121,8 @@ function ServicesPage() {
       alert(t('loginToOrder'));
       return;
     }
-    setBasket(prev => [...prev, service]);
+    addToBasket(service);
   };
-
-  const subtotal = basket.reduce((sum, item) => sum + item.priceUSD, 0);
-  const taxAmount = subtotal * 0.05;
-  const vatAmount = subtotal * 0.09;
-  const totalAmount = subtotal + taxAmount + vatAmount;
 
   if (isLoading) {
     return (
@@ -261,17 +257,6 @@ function ServicesPage() {
                   </div>
                 </div>
 
-                {/* Stats */}
-                <div className="service-stats">
-                  <div className="stat">
-                    <div className="stat-value">
-                      <span>⏱️</span>
-                      <span>{service.responseTime}</span>
-                    </div>
-                    <p className="stat-label">{t('response')}</p>
-                  </div>
-                </div>
-
                 {/* Pricing and Action */}
                 <div className="service-pricing">
                   <div className="price-display">
@@ -296,30 +281,6 @@ function ServicesPage() {
               </div>
             </div>
           ))}
-        </div>
-
-        {/* Basket */}
-        <div className="basket">
-          <h2>{t('basket')}</h2>
-          {basket.length === 0 ? (
-            <p>{t('emptyBasket')}</p>
-          ) : (
-            <div>
-              {basket.map((item, idx) => (
-                <div key={idx} className="basket-item">
-                  <span>{item.name}</span>
-                  <span>${item.priceUSD.toFixed(2)}</span>
-                </div>
-              ))}
-              <div className="basket-summary">
-                <div>{t('subtotal')}: ${subtotal.toFixed(2)}</div>
-                <div>{t('tax')}: ${taxAmount.toFixed(2)}</div>
-                <div>{t('vat')}: ${vatAmount.toFixed(2)}</div>
-                <div>{t('total')}: ${totalAmount.toFixed(2)}</div>
-              </div>
-              <button className="pay-button">{t('pay')}</button>
-            </div>
-          )}
         </div>
 
         {/* Empty State */}

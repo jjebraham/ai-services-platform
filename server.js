@@ -5,22 +5,8 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const compression = require('compression');
 const cookieParser = require('cookie-parser');
-const session = require('express-session');
-const MongoStore = require('connect-mongo');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
-
-// Import database connection
-const connectDB = require('./database');
-
-// Import models to ensure they're registered
-require('./User');
-require('./AIService');
-require('./Order');
-require('./SupportTicket');
-require('./Notification');
-require('./Settings');
-require('./CMSPage');
 
 // Import middleware
 const { errorHandler } = require('./errorHandler');
@@ -28,21 +14,63 @@ const { notFound } = require('./notFound');
 
 // Import routes
 const authRoutes = require('./routes/auth-routes');
-const orderRoutes = require('./routes/orders');
-const adminRoutes = require('./routes/admin-routes');
-
-// Import utilities
-const { initializeApp } = require('./initialize');
+const adminRoutes = require('./admin-routes');
 
 const app = express();
 
-// Connect to database
-connectDB();
+console.log('💾 Database: Using Supabase for authentication');
 
-// Trust proxy for rate limiting and security
+// Trust proxy for rate limiting and security (essential for services like Cloudflare/nginx)
 app.set('trust proxy', 1);
 
-// Security middleware
+// --- Middleware Configuration (Correct Order) ---
+
+// 1. CORS (Cross-Origin Resource Sharing)
+const corsOptions = {
+  origin: function (origin, callback) {
+    const allowedOrigins = [
+      process.env.FRONTEND_URL || 'http://localhost:3000',
+      'http://localhost:3001',
+      'http://localhost:5173',
+      'http://localhost:5174',
+      'https://kiani.exchange',
+      'https://www.kiani.exchange'
+    ];
+    
+    // Debug logging
+    console.log('CORS check - Origin:', origin);
+    console.log('CORS check - Allowed origins:', allowedOrigins);
+    
+    // Allow requests with no origin (e.g., mobile apps, Postman)
+    if (!origin) {
+      console.log('CORS: Allowing request with no origin');
+      callback(null, true);
+      return;
+    }
+    
+    // Check if origin is in allowed list
+    if (allowedOrigins.includes(origin)) {
+      console.log('CORS: Allowing origin:', origin);
+      callback(null, true);
+      return;
+    }
+    
+    // More permissive check - allow any origin that contains kiani.exchange
+    if (origin.includes('kiani.exchange') || origin.includes('localhost')) {
+      console.log('CORS: Allowing similar origin:', origin);
+      callback(null, true);
+      return;
+    }
+    
+    console.log('CORS: Blocking origin:', origin);
+    callback(new Error(`Not allowed by CORS: ${origin}`));
+  },
+  credentials: true,
+  optionsSuccessStatus: 200 // Some legacy browsers choke on 204
+};
+app.use(cors(corsOptions));
+
+// 2. Security Headers
 app.use(helmet({
   crossOriginEmbedderPolicy: false,
   contentSecurityPolicy: {
@@ -51,145 +79,103 @@ app.use(helmet({
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       fontSrc: ["'self'", "https://fonts.gstatic.com"],
       imgSrc: ["'self'", "data:", "https:"],
-      scriptSrc: ["'self'"],
-      connectSrc: ["'self'", "https://api.stripe.com"],
-      frameSrc: ["'self'", "https://js.stripe.com"]
+      scriptSrc: ["'self'", "https://accounts.google.com", "https://apis.google.com"],
+      connectSrc: ["'self'", "https://api.stripe.com", "https://accounts.google.com", "https://apis.google.com", process.env.SUPABASE_URL],
+      frameSrc: ["'self'", "https://js.stripe.com", "https://accounts.google.com"]
     }
   }
 }));
 
-// CORS configuration
-const corsOptions = {
-  origin: function (origin, callback) {
-    const allowedOrigins = [
-      process.env.FRONTEND_URL || 'http://localhost:3000',
-      'http://localhost:3000',
-      'http://localhost:3001',
-      'http://localhost:5173',
-      'http://localhost:5174' // Vite dev server
-    ];
-    
-    // Allow requests with no origin (mobile apps, Postman, etc.)
-    if (!origin) return callback(null, true);
-    
-    if (allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
-};
+// 3. Body Parsing Middleware (CRITICAL: MUST be before routes and rate limiter)
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(cookieParser());
 
-app.use(cors(corsOptions));
-
-// Rate limiting
+// 4. Rate Limiting (Applied after body is parsed)
 const limiter = rateLimit({
-  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 15 * 60 * 1000, // 15 minutes
-  max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS) || 100, // limit each IP to 100 requests per windowMs
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // limit each IP to 100 requests per windowMs
   message: {
     error: 'Too many requests from this IP, please try again later.'
   },
   standardHeaders: true,
   legacyHeaders: false
 });
-
 app.use('/api/', limiter);
 
-// Body parsing middleware
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
-app.use(cookieParser());
-
-// Compression middleware
+// 5. Compression and Logging
 app.use(compression());
-
-// Logging middleware
 if (process.env.NODE_ENV === 'development') {
   app.use(morgan('dev'));
 } else {
   app.use(morgan('combined'));
 }
 
-// Session configuration
-app.use(session({
-  secret: process.env.SESSION_SECRET || 'your-session-secret',
-  resave: false,
-  saveUninitialized: false,
-  store: MongoStore.create({
-    mongoUrl: process.env.MONGODB_URI || 'mongodb://localhost:27017/ai-services-platform'
-  }),
-  cookie: {
-    secure: process.env.NODE_ENV === 'production',
-    httpOnly: true,
-    maxAge: parseInt(process.env.SESSION_COOKIE_MAX_AGE) || 24 * 60 * 60 * 1000 // 24 hours
-  }
-}));
+// --- API Routes ---
+app.use('/api/auth', authRoutes);
+app.use('/api/admin', adminRoutes);
 
-// Serve static files
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-
-// Health check endpoint
-app.get('/health', (req, res) => {
-  res.status(200).json({
-    status: 'OK',
+// Root route for development
+app.get('/', (req, res) => {
+  res.json({
+    message: 'AI Services Platform API',
+    status: 'running',
     timestamp: new Date().toISOString(),
-    uptime: process.uptime(),
     environment: process.env.NODE_ENV || 'development'
   });
 });
 
-// API routes
-app.use('/api/auth', authRoutes);
-app.use('/api/orders', orderRoutes);
-app.use('/api/admin', adminRoutes);
+// Health check endpoints
+app.get('/health', (req, res) => {
+  res.status(200).json({
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    environment: process.env.NODE_ENV || 'production'
+  });
+});
 
-// Serve frontend in production
+app.get('/api/health', (req, res) => {
+  res.status(200).json({
+    status: 'healthy',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// --- Frontend Serving (for Production) ---
 if (process.env.NODE_ENV === 'production') {
-  app.use(express.static(path.join(__dirname, '../frontend/build')));
+  const distPath = path.join(__dirname, 'dist');
+  app.use(express.static(distPath));
   
+  // Legacy auth path redirects
+  app.get(['/auth/login', '/auth/register'], (req, res) => {
+    const target = req.path.includes('login') ? '/login' : '/register';
+    res.redirect(301, target);
+  });
+
   app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, '../frontend/build/index.html'));
+    // Do not swallow API routes with SPA catch-all
+    if (req.path.startsWith('/api/')) {
+      return res.status(404).json({ error: 'API endpoint not found' });
+    }
+    res.sendFile(path.join(distPath, 'index.html'));
   });
 }
 
-// Error handling middleware
+// --- Error Handling ---
 app.use(notFound);
 app.use(errorHandler);
 
-const PORT = process.env.PORT || 5000;
+// --- Server Startup ---
+const PORT = process.env.PORT || 3000; // Ensure port is 3000
 const HOST = process.env.HOST || '0.0.0.0';
 
-const server = app.listen(PORT, HOST, async () => {
-  console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on http://${HOST}:${PORT}`);
-  
-  // Initialize application data
-  try {
-    await initializeApp();
-    console.log('Application initialized successfully');
-  } catch (error) {
-    console.error('Failed to initialize application:', error);
-  }
+const server = app.listen(PORT, HOST, () => {
+  console.log(`✅ Server running in ${process.env.NODE_ENV || 'development'} mode on http://${HOST}:${PORT}`);
+  console.log('✅ Application ready - Supabase authentication enabled');
 });
 
-// Handle unhandled promise rejections
-process.on('unhandledRejection', (err, promise) => {
-  console.log(`Error: ${err.message}`);
-  // Close server & exit process
-  server.close(() => {
-    process.exit(1);
-  });
-});
-
-// Handle uncaught exceptions
-process.on('uncaughtException', (err) => {
-  console.log(`Error: ${err.message}`);
-  process.exit(1);
-});
-
-// Graceful shutdown
+// Graceful shutdown handling
 process.on('SIGTERM', () => {
   console.log('SIGTERM received. Shutting down gracefully...');
   server.close(() => {

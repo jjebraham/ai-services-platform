@@ -1,9 +1,13 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Zap, Mail, Phone, MapPin } from 'lucide-react';
+import { Zap, Mail } from 'lucide-react';
+import { useLanguage } from './LanguageContext';
+import { useTheme } from './ThemeContext';
 
 function Footer() {
   const currentYear = new Date().getFullYear();
+  const { toggleLanguage, lang } = useLanguage();
+  const { theme } = useTheme();
 
   return (
     <footer className="bg-muted/50 border-t">
@@ -12,14 +16,17 @@ function Footer() {
           {/* Company Info */}
           <div className="space-y-4">
             <Link to="/" className="flex items-center space-x-2">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-                <Zap className="h-5 w-5" />
-              </div>
-              <span className="text-xl font-bold">AI Services</span>
+              <img
+                src={theme === 'dark' ? '/kiani-exchange-logo-white.svg' : '/kiani-exchange-logo-gray.svg'}
+                alt="KIANI.EXCHANGE"
+                className="h-2"
+              />
             </Link>
-            <p className="text-sm text-muted-foreground">
-              Your gateway to premium AI services. Access cutting-edge AI tools and services 
-              from leading providers with secure payments and dedicated support.
+            <p className="text-sm text-muted-foreground" dir={lang === 'fa' ? 'rtl' : 'ltr'}>
+              {lang === 'fa' 
+                ? 'دروازه شما به خدمات هوش مصنوعی پرمیوم. دسترسی به ابزارها و خدمات پیشرفته هوش مصنوعی از ارائه‌دهندگان پیشرو با پرداخت‌های امن و پشتیبانی اختصاصی.'
+                : 'Your gateway to premium AI services. Access cutting-edge AI tools and services from leading providers with secure payments and dedicated support.'
+              }
             </p>
             <div className="flex space-x-4">
               <div className="flex items-center space-x-2 text-sm text-muted-foreground">
@@ -30,91 +37,97 @@ function Footer() {
           </div>
 
           {/* Services */}
-          <div className="space-y-4">
-            <h3 className="text-sm font-semibold">Services</h3>
+          <div className="space-y-4" dir={lang === 'fa' ? 'rtl' : 'ltr'}>
+            <h3 className="text-sm font-semibold">
+              {lang === 'fa' ? 'خدمات' : 'Services'}
+            </h3>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li>
                 <Link to="/services" className="hover:text-primary transition-colors">
-                  Browse Services
+                  {lang === 'fa' ? 'مرور خدمات' : 'Browse Services'}
                 </Link>
               </li>
               <li>
                 <Link to="/services?category=language_model" className="hover:text-primary transition-colors">
-                  Language Models
+                  {lang === 'fa' ? 'مدل‌های زبان' : 'Language Models'}
                 </Link>
               </li>
               <li>
                 <Link to="/services?category=image_generation" className="hover:text-primary transition-colors">
-                  Image Generation
+                  {lang === 'fa' ? 'تولید تصویر' : 'Image Generation'}
                 </Link>
               </li>
               <li>
                 <Link to="/services?category=code_execution" className="hover:text-primary transition-colors">
-                  Code Execution
+                  {lang === 'fa' ? 'اجرای کد' : 'Code Execution'}
                 </Link>
               </li>
               <li>
                 <Link to="/services?category=data_analysis" className="hover:text-primary transition-colors">
-                  Data Analysis
+                  {lang === 'fa' ? 'تجزیه و تحلیل داده' : 'Data Analysis'}
                 </Link>
               </li>
             </ul>
           </div>
 
           {/* Support */}
-          <div className="space-y-4">
-            <h3 className="text-sm font-semibold">Support</h3>
+          <div className="space-y-4" dir={lang === 'fa' ? 'rtl' : 'ltr'}>
+            <h3 className="text-sm font-semibold">
+              {lang === 'fa' ? 'پشتیبانی' : 'Support'}
+            </h3>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li>
                 <Link to="/dashboard/support" className="hover:text-primary transition-colors">
-                  Help Center
+                  {lang === 'fa' ? 'مرکز راهنما' : 'Help Center'}
                 </Link>
               </li>
               <li>
                 <Link to="/dashboard/support" className="hover:text-primary transition-colors">
-                  Contact Support
+                  {lang === 'fa' ? 'تماس با پشتیبانی' : 'Contact Support'}
                 </Link>
               </li>
               <li>
                 <Link to="/docs/api" className="hover:text-primary transition-colors">
-                  API Documentation
+                  {lang === 'fa' ? 'مستندات API' : 'API Documentation'}
                 </Link>
               </li>
               <li>
                 <Link to="/status" className="hover:text-primary transition-colors">
-                  Service Status
+                  {lang === 'fa' ? 'وضعیت سرویس' : 'Service Status'}
                 </Link>
               </li>
               <li>
                 <Link to="/docs/faq" className="hover:text-primary transition-colors">
-                  FAQ
+                  {lang === 'fa' ? 'سوالات متداول' : 'FAQ'}
                 </Link>
               </li>
             </ul>
           </div>
 
           {/* Legal */}
-          <div className="space-y-4">
-            <h3 className="text-sm font-semibold">Legal</h3>
+          <div className="space-y-4" dir={lang === 'fa' ? 'rtl' : 'ltr'}>
+            <h3 className="text-sm font-semibold">
+              {lang === 'fa' ? 'حقوقی' : 'Legal'}
+            </h3>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li>
                 <Link to="/legal/privacy" className="hover:text-primary transition-colors">
-                  Privacy Policy
+                  {lang === 'fa' ? 'سیاست حریم خصوصی' : 'Privacy Policy'}
                 </Link>
               </li>
               <li>
                 <Link to="/legal/terms" className="hover:text-primary transition-colors">
-                  Terms of Service
+                  {lang === 'fa' ? 'شرایط خدمات' : 'Terms of Service'}
                 </Link>
               </li>
               <li>
                 <Link to="/legal/cookies" className="hover:text-primary transition-colors">
-                  Cookie Policy
+                  {lang === 'fa' ? 'سیاست کوکی' : 'Cookie Policy'}
                 </Link>
               </li>
               <li>
                 <Link to="/legal/compliance" className="hover:text-primary transition-colors">
-                  Compliance
+                  {lang === 'fa' ? 'انطباق' : 'Compliance'}
                 </Link>
               </li>
             </ul>
@@ -123,16 +136,23 @@ function Footer() {
 
         {/* Bottom Section */}
         <div className="mt-8 pt-8 border-t border-border">
-          <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
+          <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0" dir={lang === 'fa' ? 'rtl' : 'ltr'}>
             <div className="text-sm text-muted-foreground">
-              © {currentYear} AI Services Platform. All rights reserved.
+              {lang === 'fa' 
+                ? `© ${currentYear} پلتفرم خدمات هوش مصنوعی کیانی. تمامی حقوق محفوظ است.`
+                : `© ${currentYear} AI Services Platform. All rights reserved.`
+              }
             </div>
             <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-              <span>Secure payments powered by Stripe</span>
-              <div className="flex items-center space-x-2">
-                <div className="h-2 w-2 rounded-full bg-green-500"></div>
-                <span>All systems operational</span>
-              </div>
+              <span>
+                {lang === 'fa' ? 'پرداخت‌های امن توسط Stripe' : 'Secure payments powered by Stripe'}
+              </span>
+              <button
+                onClick={toggleLanguage}
+                className="nav-button lang-button"
+              >
+                {lang === 'fa' ? 'فارسی' : 'English'}
+              </button>
             </div>
           </div>
         </div>

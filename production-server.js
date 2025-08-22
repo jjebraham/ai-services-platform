@@ -1,19 +1,25 @@
-require('dotenv').config();
-const express = require('express');
-const cors = require('cors');
-const helmet = require('helmet');
-const morgan = require('morgan');
-const compression = require('compression');
-const cookieParser = require('cookie-parser');
-const session = require('express-session');
-const rateLimit = require('express-rate-limit');
-const path = require('path');
+import dotenv from 'dotenv';
+dotenv.config();
+import express from 'express';
+import cors from 'cors';
+import helmet from 'helmet';
+import morgan from 'morgan';
+import compression from 'compression';
+import cookieParser from 'cookie-parser';
+import session from 'express-session';
+import rateLimit from 'express-rate-limit';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+// Get __dirname equivalent for ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Initialize Supabase configuration
-const supabaseConfig = require('./supabase-config');
+import supabaseConfig from './supabase-config.js';
 
 // Import routes
-const authRoutes = require('./routes/auth-routes');
+import authRoutes from './routes/auth-routes.js';
 
 const app = express();
 
@@ -23,20 +29,10 @@ supabaseConfig.initialize();
 // Trust proxy for rate limiting and security (important for production)
 app.set('trust proxy', 1);
 
-// Security middleware
+// Security middleware - CSP disabled to avoid conflicts with nginx
 app.use(helmet({
   crossOriginEmbedderPolicy: false,
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://cdn.tailwindcss.com"],
-      fontSrc: ["'self'", "https://fonts.gstatic.com"],
-      imgSrc: ["'self'", "data:", "https:"],
-      scriptSrc: ["'self'", "'unsafe-inline'", "https://cdn.tailwindcss.com", "https://cdn.jsdelivr.net"],
-      connectSrc: ["'self'", "https://api.stripe.com"],
-      frameSrc: ["'self'", "https://js.stripe.com"]
-    }
-  }
+  contentSecurityPolicy: false
 }));
 
 // CORS configuration for production
@@ -175,6 +171,118 @@ app.post('/api/admin/login', (req, res) => {
 // Use auth routes
 app.use('/api/auth', authRoutes);
 
+// OTP routes for phone authentication
+app.post('/api/otp/start', async (req, res) => {
+  try {
+    const { phone } = req.body;
+
+    if (!phone) {
+      return res.status(400).json({
+        success: false,
+        error: 'Phone number is required'
+      });
+    }
+
+    // Generate 6-digit verification code
+    const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
+    
+    // Store verification data temporarily (in production, use Redis or database)
+    const tempData = {
+      phone,
+      verificationCode,
+      timestamp: Date.now()
+    };
+
+    // In production, store in Redis with TTL
+    global.verificationStore = global.verificationStore || {};
+    global.verificationStore[phone] = tempData;
+
+    // Import SMS service dynamically
+    const smsService = await import('./services/sms-service.js').then(m => m.default);
+    
+    // Send SMS
+    const smsResult = await smsService.sendOTP(phone, verificationCode);
+    
+    if (smsResult.success) {
+      res.json({
+        success: true,
+        message: 'Verification code sent successfully',
+        reference: smsResult.reference
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        error: 'Failed to send verification code'
+      });
+    }
+
+  } catch (error) {
+    console.error('OTP start error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error'
+    });
+  }
+});
+
+app.post('/api/otp/verify', async (req, res) => {
+  try {
+    const { phone, otp } = req.body;
+
+    if (!phone || !otp) {
+      return res.status(400).json({
+        success: false,
+        error: 'Phone number and OTP are required'
+      });
+    }
+
+    // Get stored verification data
+    global.verificationStore = global.verificationStore || {};
+    const storedData = global.verificationStore[phone];
+
+    if (!storedData) {
+      return res.status(400).json({
+        success: false,
+        error: 'No verification request found for this phone number'
+      });
+    }
+
+    // Check if OTP is expired (5 minutes)
+    const isExpired = Date.now() - storedData.timestamp > 5 * 60 * 1000;
+    if (isExpired) {
+      delete global.verificationStore[phone];
+      return res.status(400).json({
+        success: false,
+        error: 'Verification code has expired'
+      });
+    }
+
+    // Verify OTP
+    if (storedData.verificationCode !== otp) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid verification code'
+      });
+    }
+
+    // OTP is valid, clean up
+    delete global.verificationStore[phone];
+
+    res.json({
+      success: true,
+      message: 'Phone number verified successfully',
+      token: 'temp-' + Date.now() // Temporary token for registration completion
+    });
+
+  } catch (error) {
+    console.error('OTP verify error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error'
+    });
+  }
+});
+
 // API routes for services, users, orders, etc.
 app.get('/api/services', (req, res) => {
   res.json({
@@ -217,12 +325,15 @@ app.get('*', (req, res) => {
   
   // For all other routes, serve the React app
   const indexPath = path.join(__dirname, 'dist', 'index.html');
-  if (require('fs').existsSync(indexPath)) {
-    res.sendFile(indexPath);
-  } else {
-    // Fallback to public/index.html if dist doesn't exist
-    res.sendFile(path.join(__dirname, 'index.html'));
-  }
+  console.log(`🔄 SPA route requested: ${req.path} -> serving ${indexPath}`);
+  
+  // Always serve the React app for non-API routes
+  res.sendFile(indexPath, (err) => {
+    if (err) {
+      console.error(`❌ Error serving ${indexPath}:`, err);
+      res.status(500).send('Error loading application');
+    }
+  });
 });
 
 // Error handling middleware

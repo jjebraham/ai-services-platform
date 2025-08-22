@@ -1,0 +1,191 @@
+const express = require('express');
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const User = require('../models/User');
+
+const router = express.Router();
+
+// Login route
+router.post('/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    // Validation
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        error: 'Please provide email and password'
+      });
+    }
+
+    // Check if user exists
+    const user = await User.findOne({ email }).select('+password');
+    console.log("DEBUG: User found:", user ? "Yes" : "No");    if (user) console.log("DEBUG: User email:", user.email);
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        error: 'Invalid credentials'
+      });
+    }
+
+    // Check password
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(401).json({
+        success: false,
+        error: 'Invalid credentials'
+      });
+    }
+
+    // Create token
+    const token = jwt.sign(
+      { id: user._id },
+      process.env.JWT_SECRET || 'fallback-secret',
+      { expiresIn: '30d' }
+    );
+
+    // Construct user name from profile
+    const firstName = user.profile?.firstName || '';
+    const lastName = user.profile?.lastName || '';
+    const fullName = (firstName + ' ' + lastName).trim() || user.email;
+
+    res.status(200).json({
+      success: true,
+      token,
+      user: {
+        id: user._id,
+        email: user.email,
+        phone: user.profile?.phone || '',
+        name: fullName,
+        role: user.role,
+        balance: 0
+      }
+    });
+
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Server error'
+    });
+  }
+});
+
+// Register route
+router.post('/register', async (req, res) => {
+  try {
+    const { email, password, firstName, lastName } = req.body;
+
+    // Validation
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        error: 'Please provide email and password'
+      });
+    }
+
+    // Check if user already exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({
+        success: false,
+        error: 'User already exists'
+      });
+    }
+
+    // Hash password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    // Create user
+    const user = await User.create({
+      email,
+      password: hashedPassword,
+      profile: {
+        firstName: firstName || '',
+        lastName: lastName || ''
+      }
+    });
+
+    // Create token
+    const token = jwt.sign(
+      { id: user._id },
+      process.env.JWT_SECRET || 'fallback-secret',
+      { expiresIn: '30d' }
+    );
+
+    res.status(201).json({
+      success: true,
+      token,
+      user: {
+        id: user._id,
+        email: user.email,
+        role: user.role
+      }
+    });
+
+  } catch (error) {
+    console.error('Register error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Server error'
+    });
+  }
+});
+
+// Get current user
+router.get('/me', async (req, res) => {
+  try {
+    let token;
+
+    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+      token = req.headers.authorization.split(' ')[1];
+    } else if (req.cookies.token) {
+      token = req.cookies.token;
+    }
+
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        error: 'Not authorized'
+      });
+    }
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback-secret');
+    const user = await User.findById(decoded.id).select('-password');
+
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        error: 'User not found'
+      });
+    }
+
+    // Construct user name from profile
+    const firstName = user.profile?.firstName || '';
+    const lastName = user.profile?.lastName || '';
+    const fullName = (firstName + ' ' + lastName).trim() || user.email;
+
+    res.status(200).json({
+      success: true,
+      user: {
+        id: user._id,
+        email: user.email,
+        phone: user.profile?.phone || '',
+        name: fullName,
+        role: user.role,
+        balance: 0,
+        profile: user.profile
+      }
+    });
+
+  } catch (error) {
+    console.error('Get user error:', error);
+    res.status(401).json({
+      success: false,
+      error: 'Not authorized'
+    });
+  }
+});
+
+module.exports = router;

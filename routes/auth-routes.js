@@ -1,29 +1,45 @@
 const express = require('express');
 const router = express.Router();
-const authService = require('../services/auth-service');
-const supabaseConfig = require('../supabase-config');
+const authService = require('../services/auth-service.js');
+const supabaseConfig = require('../supabase-config.js');
+const passport = require('passport');
+const { OAuth2Client } = require('google-auth-library');
+
+// Initialize Google OAuth client
+const googleClient = new OAuth2Client(
+  process.env.GOOGLE_CLIENT_ID,
+  process.env.GOOGLE_CLIENT_SECRET,
+  process.env.GOOGLE_REDIRECT_URI || 'http://localhost:3000/auth/google/callback'
+);
 
 // Register route
 router.post('/register', async (req, res) => {
   try {
-    const { email, password, fullName } = req.body;
+    // Accept both {firstName,lastName} or {fullName}
+    const { firstName, lastName, fullName: incomingFullName, email, password } = req.body || {};
 
     // Validation
-    if (!email || !password || !fullName) {
+    const fullName = incomingFullName || [firstName, lastName].filter(Boolean).join(' ').trim();
+
+    if (!fullName || !email || !password) {
       return res.status(400).json({
         success: false,
-        error: 'Email, password, and full name are required'
+        message: 'Full name, email and password are required'
       });
     }
 
     if (password.length < 6) {
       return res.status(400).json({
         success: false,
-        error: 'Password must be at least 6 characters long'
+        message: 'Password must be at least 6 characters long'
       });
     }
 
-    const result = await authService.register({ email, password, fullName });
+    const result = await authService.register({ 
+      email, 
+      password, 
+      fullName
+    });
 
     if (result.success) {
       res.status(201).json(result);
@@ -49,7 +65,7 @@ router.post('/login', async (req, res) => {
     if (!email || !password) {
       return res.status(400).json({
         success: false,
-        error: 'Email and password are required'
+        message: 'Email and password are required'
       });
     }
 
@@ -97,6 +113,71 @@ router.post('/logout', async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Internal server error'
+    });
+  }
+});
+
+// Google OAuth route
+router.post('/google', async (req, res) => {
+  try {
+    const { credential } = req.body;
+
+    if (!credential) {
+      return res.status(400).json({
+        success: false,
+        error: 'Google credential is required'
+      });
+    }
+
+    // Verify the Google token
+    const ticket = await googleClient.verifyIdToken({
+      idToken: credential,
+      audience: process.env.GOOGLE_CLIENT_ID
+    });
+
+    const payload = ticket.getPayload();
+    const { email, name, picture, sub: googleId } = payload;
+
+    // Check if user exists or create new user
+    let result = await authService.findUserByEmail(email);
+    
+    if (!result.success) {
+      // Create new user with Google data
+      result = await authService.register({
+        email,
+        fullName: name,
+        googleId,
+        profilePicture: picture,
+        isGoogleUser: true
+      });
+    }
+
+    if (result.success) {
+      // Generate JWT token
+      const token = await authService.generateToken(result.user);
+      
+      // Set HTTP-only cookie
+      res.cookie('token', token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 24 * 60 * 60 * 1000 // 24 hours
+      });
+
+      res.json({
+        success: true,
+        message: 'Google authentication successful',
+        user: result.user
+      });
+    } else {
+      res.status(400).json(result);
+    }
+
+  } catch (error) {
+    console.error('Google OAuth error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Google authentication failed'
     });
   }
 });
@@ -162,6 +243,8 @@ router.put('/profile', async (req, res) => {
   }
 });
 
+
+
 // Check authentication status
 router.get('/status', async (req, res) => {
   try {
@@ -180,6 +263,227 @@ router.get('/status', async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to check authentication status'
+    });
+  }
+});
+
+// Phone authentication routes
+
+// Send OTP to phone number
+router.post('/send-otp', async (req, res) => {
+  try {
+    const { phoneNumber } = req.body;
+
+    // Validation
+    if (!phoneNumber) {
+      return res.status(400).json({
+        success: false,
+        error: 'Phone number is required'
+      });
+    }
+
+    // Validate phone number format (basic validation)
+    const phoneRegex = /^(\+98|0)?9\d{9}$/;
+    if (!phoneRegex.test(phoneNumber.replace(/\s/g, ''))) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid phone number format'
+      });
+    }
+
+    const result = await otpService.requestOTP(phoneNumber);
+
+    if (result.success) {
+      res.json({
+        success: true,
+        message: result.message,
+        expiresIn: result.expiresIn
+      });
+    } else {
+      res.status(400).json(result);
+    }
+
+  } catch (error) {
+    console.error('Send OTP error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to send OTP'
+    });
+  }
+});
+
+// Verify OTP and login/register user
+router.post('/verify-otp', async (req, res) => {
+  try {
+    const { phoneNumber, otp } = req.body;
+
+    // Validation
+    if (!phoneNumber || !otp) {
+      return res.status(400).json({
+        success: false,
+        error: 'Phone number and OTP are required'
+      });
+    }
+
+    // Verify OTP
+    const otpResult = await otpService.verifyOTP(phoneNumber, otp);
+
+    if (!otpResult.success) {
+      return res.status(400).json(otpResult);
+    }
+
+    // OTP is valid, now check if user exists or create new user
+    const normalizedPhone = otpService.normalizePhoneNumber(phoneNumber);
+    // Choose auth service based on OFFLINE_AUTH flag
+    const svc = offlineAuth || authService;
+
+    try {
+      // Try to find existing user by phone
+      let user = await svc.findUserByPhone(normalizedPhone);
+      if (!user) {
+        // Create new user with phone number
+        const userData = {
+          phone: normalizedPhone,
+          fullName: `User ${normalizedPhone.slice(-4)}`,
+          isPhoneVerified: true
+        };
+
+        const createResult = await svc.createUserWithPhone(userData);
+
+        if (!createResult.success) {
+          return res.status(400).json(createResult);
+        }
+
+        user = createResult.user;
+      } else {
+        // Update phone verification status
+        await svc.updatePhoneVerification(user.id, true);
+      }
+
+      // Generate JWT token
+      const token = svc.generateToken(user.id);
+
+      // Set HTTP-only cookie with JWT token
+      res.cookie('token', token, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 24 * 60 * 60 * 1000
+      });
+
+      res.json({
+        success: true,
+        message: 'Phone verification successful',
+        user: {
+          id: user.id,
+          phone: user.phone,
+          fullName: user.full_name || user.fullName || `User ${normalizedPhone.slice(-4)}`,
+          isPhoneVerified: true
+        }
+      });
+
+    } catch (dbError) {
+      console.error('Database error during phone auth:', dbError);
+      res.status(500).json({
+        success: false,
+        error: 'Database error during authentication'
+      });
+    }
+
+  } catch (error) {
+    console.error('Verify OTP error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to verify OTP'
+    });
+  }
+});
+
+// Email verification routes
+
+// Verify email with code
+router.post('/verify-email', async (req, res) => {
+  try {
+    const { email, code } = req.body;
+
+    if (!email || !code) {
+      return res.status(400).json({
+        success: false,
+        error: 'Email and verification code are required'
+      });
+    }
+
+    const result = await authService.verifyEmail(email, code);
+    
+    if (result.success) {
+      res.status(200).json(result);
+    } else {
+      res.status(400).json(result);
+    }
+
+  } catch (error) {
+    console.error('Email verification route error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error'
+    });
+  }
+});
+
+// Verify email with token (link-based verification)
+router.get('/verify-email/:token', async (req, res) => {
+  try {
+    const { token } = req.params;
+
+    if (!token) {
+      return res.status(400).json({
+        success: false,
+        error: 'Verification token is required'
+      });
+    }
+
+    const result = await authService.verifyEmailToken(token);
+    
+    if (result.success) {
+      res.status(200).json(result);
+    } else {
+      res.status(400).json(result);
+    }
+
+  } catch (error) {
+    console.error('Email verification token route error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error'
+    });
+  }
+});
+
+// Resend verification code
+router.post('/resend-verification', async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        error: 'Email is required'
+      });
+    }
+
+    const result = await authService.resendVerificationCode(email);
+    
+    if (result.success) {
+      res.status(200).json(result);
+    } else {
+      res.status(400).json(result);
+    }
+
+  } catch (error) {
+    console.error('Resend verification route error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Internal server error'
     });
   }
 });

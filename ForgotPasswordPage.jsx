@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Mail, ArrowLeft, AlertCircle, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
-import LoadingSpinner from '../../components/LoadingSpinner';
+import LoadingSpinner from './LoadingSpinner';
 
 // Validation schema
 const forgotPasswordSchema = z.object({

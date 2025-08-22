@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
+import { useAuth } from './AuthContext';
+import { useTheme } from './ThemeContext';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -36,6 +37,7 @@ import { toast } from 'sonner';
 
 function Header() {
   const { user, isAuthenticated, logout, isAdmin, hasCompletedKYC } = useAuth();
+  const { theme } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -81,10 +83,11 @@ function Header() {
         <div className="flex h-16 items-center justify-between">
           {/* Logo */}
           <Link to="/" className="flex items-center space-x-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-              <Zap className="h-5 w-5" />
-            </div>
-            <span className="text-xl font-bold">AI Services</span>
+            <img
+              src={theme === 'dark' ? '/kiani-exchange-logo-white.svg' : '/kiani-exchange-logo-gray.svg'}
+              alt="KIANI.EXCHANGE"
+              className="h-2"
+            />
           </Link>
 
           {/* Desktop Navigation */}
