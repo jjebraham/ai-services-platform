@@ -7,7 +7,7 @@ class AuthService {
     // Don't store clients in constructor - get them dynamically
   }
 
-  // Register new user
+  // Register new user with email verification
   async register(userData) {
     const { email, password, fullName } = userData;
 
@@ -20,9 +20,8 @@ class AuthService {
         };
       }
 
-      // Get clients dynamically
+      // Get client dynamically
       const supabase = supabaseConfig.getClient();
-      const adminSupabase = supabaseConfig.getAdminClient();
 
       if (!supabase) {
         return { 
@@ -31,70 +30,47 @@ class AuthService {
         };
       }
 
-      // Check if user already exists
-      const { data: existingUser } = await supabase
-        .from('user_profiles')
-        .select('email')
-        .eq('email', email)
-        .single();
-
-      if (existingUser) {
-        return { success: false, error: 'User already exists with this email' };
-      }
-
-      // Hash password
-      const saltRounds = 12;
-      const hashedPassword = await bcrypt.hash(password, saltRounds);
-
-      // Create user in Supabase Auth
+      // Register user with Supabase Auth (includes email verification)
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: {
             full_name: fullName
-          }
+          },
+          emailRedirectTo: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/verify-email`
         }
       });
 
       if (authError) {
+        if (authError.message.includes('already registered')) {
+          return { success: false, error: 'User already exists with this email' };
+        }
         return { success: false, error: authError.message };
       }
 
-      // Create user profile
-      const { data: profileData, error: profileError } = await supabase
-        .from('user_profiles')
-        .insert([
-          {
+      // Check if email confirmation is required
+      if (authData.user && !authData.user.email_confirmed_at) {
+        return {
+          success: true,
+          message: 'Registration successful! Please check your email to verify your account.',
+          requiresVerification: true,
+          user: {
             id: authData.user.id,
-            email,
-            full_name: fullName,
-            password_hash: hashedPassword,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-            is_active: true,
-            role: 'user'
+            email: authData.user.email,
+            fullName: fullName
           }
-        ])
-        .select()
-        .single();
-
-      if (profileError) {
-        // Clean up auth user if profile creation fails
-        if (adminSupabase) {
-          await adminSupabase.auth.admin.deleteUser(authData.user.id);
-        }
-        return { success: false, error: profileError.message };
+        };
       }
 
+      // If email is already confirmed (shouldn't happen in normal flow)
       return {
         success: true,
-        message: 'User registered successfully',
+        message: 'Registration successful!',
         user: {
-          id: profileData.id,
-          email: profileData.email,
-          fullName: profileData.full_name,
-          role: profileData.role
+          id: authData.user.id,
+          email: authData.user.email,
+          fullName: fullName
         }
       };
 
@@ -124,24 +100,6 @@ class AuthService {
         };
       }
 
-      // Get user profile
-      const { data: userProfile, error: profileError } = await supabase
-        .from('user_profiles')
-        .select('*')
-        .eq('email', email)
-        .eq('is_active', true)
-        .single();
-
-      if (profileError || !userProfile) {
-        return { success: false, error: 'Invalid email or password' };
-      }
-
-      // Verify password
-      const isValidPassword = await bcrypt.compare(password, userProfile.password_hash);
-      if (!isValidPassword) {
-        return { success: false, error: 'Invalid email or password' };
-      }
-
       // Sign in with Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email,
@@ -149,35 +107,45 @@ class AuthService {
       });
 
       if (authError) {
-        return { success: false, error: authError.message };
+        if (authError.message.includes('Email not confirmed')) {
+          return { 
+            success: false, 
+            error: 'Please verify your email address before logging in. Check your inbox for a verification link.',
+            requiresVerification: true
+          };
+        }
+        return { success: false, error: 'Invalid email or password' };
+      }
+
+      // Check if email is verified
+      if (!authData.user.email_confirmed_at) {
+        return {
+          success: false,
+          error: 'Please verify your email address before logging in. Check your inbox for a verification link.',
+          requiresVerification: true
+        };
       }
 
       // Generate JWT token
       const token = jwt.sign(
         { 
-          userId: userProfile.id, 
-          email: userProfile.email,
-          role: userProfile.role 
+          userId: authData.user.id, 
+          email: authData.user.email,
+          role: 'user' // Default role, can be customized
         },
         process.env.JWT_SECRET || 'your-jwt-secret',
         { expiresIn: '24h' }
       );
-
-      // Update last login
-      await supabase
-        .from('user_profiles')
-        .update({ last_login: new Date().toISOString() })
-        .eq('id', userProfile.id);
 
       return {
         success: true,
         message: 'Login successful',
         token,
         user: {
-          id: userProfile.id,
-          email: userProfile.email,
-          fullName: userProfile.full_name,
-          role: userProfile.role
+          id: authData.user.id,
+          email: authData.user.email,
+          fullName: authData.user.user_metadata?.full_name || authData.user.email.split('@')[0],
+          role: 'user'
         }
       };
 
@@ -187,20 +155,30 @@ class AuthService {
     }
   }
 
-  // Get user profile
-  async getUserProfile(userId) {
+  // Verify email with token
+  async verifyEmail(token) {
     try {
+      if (!supabaseConfig.isConfigured()) {
+        return { 
+          success: false, 
+          error: 'Database not configured. Please contact administrator.' 
+        };
+      }
+
       const supabase = supabaseConfig.getClient();
 
       if (!supabase) {
-        return { success: false, error: 'Database connection not available' };
+        return { 
+          success: false, 
+          error: 'Database connection not available. Please contact administrator.' 
+        };
       }
 
-      const { data: userProfile, error } = await supabase
-        .from('user_profiles')
-        .select('id, email, full_name, role, created_at, last_login, is_active')
-        .eq('id', userId)
-        .single();
+      // Verify the email using the token
+      const { data, error } = await supabase.auth.verifyOtp({
+        token_hash: token,
+        type: 'email'
+      });
 
       if (error) {
         return { success: false, error: error.message };
@@ -208,7 +186,123 @@ class AuthService {
 
       return {
         success: true,
-        user: userProfile
+        message: 'Email verified successfully! You can now log in.',
+        user: {
+          id: data.user.id,
+          email: data.user.email,
+          fullName: data.user.user_metadata?.full_name || data.user.email.split('@')[0]
+        }
+      };
+
+    } catch (error) {
+      console.error('Email verification error:', error);
+      return { success: false, error: 'Email verification failed. Please try again.' };
+    }
+  }
+
+  // In-memory store for tracking resend attempts (in production, use Redis or database)
+  static resendAttempts = new Map();
+
+  // Resend verification email
+  async resendVerification(email) {
+    try {
+      if (!supabaseConfig.isConfigured()) {
+        return { 
+          success: false, 
+          error: 'Database not configured. Please contact administrator.' 
+        };
+      }
+
+      const supabase = supabaseConfig.getClient();
+
+      if (!supabase) {
+        return { 
+          success: false, 
+          error: 'Database connection not available. Please contact administrator.' 
+        };
+      }
+
+      // Check rate limiting (10 minutes = 600,000 milliseconds)
+      const now = Date.now();
+      const lastAttempt = AuthService.resendAttempts.get(email);
+      const cooldownPeriod = 10 * 60 * 1000; // 10 minutes in milliseconds
+
+      if (lastAttempt && (now - lastAttempt) < cooldownPeriod) {
+        const remainingTime = Math.ceil((cooldownPeriod - (now - lastAttempt)) / 60000); // Convert to minutes
+        return {
+          success: false,
+          error: `Please wait ${remainingTime} minute(s) before requesting another verification email.`
+        };
+      }
+
+      // Resend verification email
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: email,
+        options: {
+          emailRedirectTo: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/verify-email`
+        }
+      });
+
+      if (error) {
+        return { success: false, error: error.message };
+      }
+
+      // Record the successful resend attempt
+      AuthService.resendAttempts.set(email, now);
+
+      // Clean up old entries (older than 24 hours) to prevent memory leaks
+      const oneDayAgo = now - (24 * 60 * 60 * 1000);
+      for (const [emailKey, timestamp] of AuthService.resendAttempts.entries()) {
+        if (timestamp < oneDayAgo) {
+          AuthService.resendAttempts.delete(emailKey);
+        }
+      }
+
+      return {
+        success: true,
+        message: 'Verification email sent! Please check your inbox.'
+      };
+
+    } catch (error) {
+      console.error('Resend verification error:', error);
+      return { success: false, error: 'Failed to resend verification email. Please try again.' };
+    }
+  }
+
+  // Get user profile
+  async getUserProfile(userId) {
+    try {
+      if (!supabaseConfig.isConfigured()) {
+        return { 
+          success: false, 
+          error: 'Database not configured. Please contact administrator.' 
+        };
+      }
+
+      const supabase = supabaseConfig.getClient();
+
+      if (!supabase) {
+        return { success: false, error: 'Database connection not available' };
+      }
+
+      // Get current user from Supabase Auth
+      const { data: { user }, error } = await supabase.auth.getUser();
+
+      if (error || !user) {
+        return { success: false, error: 'User not found or not authenticated.' };
+      }
+
+      return {
+        success: true,
+        user: {
+          id: user.id,
+          email: user.email,
+          fullName: user.user_metadata?.full_name || user.email.split('@')[0],
+          role: 'user',
+          createdAt: user.created_at,
+          emailVerified: !!user.email_confirmed_at
+        }
       };
 
     } catch (error) {
