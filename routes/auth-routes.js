@@ -35,11 +35,7 @@ router.post('/register', async (req, res) => {
       });
     }
 
-    const result = await authService.register({ 
-      email, 
-      password, 
-      fullName
-    });
+    const result = await authService.register(email, password, fullName);
 
     if (result.success) {
       res.status(201).json(result);

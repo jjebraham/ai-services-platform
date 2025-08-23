@@ -22,6 +22,7 @@ function LoginPage() {
 
   const [isLoading, setIsLoading] = useState(false);
   const [apiError, setApiError] = useState('');
+  const [requiresEmailVerification, setRequiresEmailVerification] = useState(false);
 
   // Email login form
   const emailForm = useForm({
@@ -43,12 +44,18 @@ function LoginPage() {
   const handleEmailLogin = async (data) => {
     setIsLoading(true);
     setApiError('');
+    setRequiresEmailVerification(false);
     
     try {
       await login(data.email, data.password);
       navigate('/dashboard');
     } catch (err) {
-      setApiError(err.message || 'Login failed');
+      if (err.requiresEmailVerification) {
+        setRequiresEmailVerification(true);
+        setApiError(err.message || 'Please verify your email address before logging in.');
+      } else {
+        setApiError(err.message || 'Login failed');
+      }
     } finally {
       setIsLoading(false);
     }
@@ -142,8 +149,14 @@ function LoginPage() {
         </div>
 
         {(error || apiError) && (
-          <div className="form-error global-error">
+          <div className={`form-error global-error ${requiresEmailVerification ? 'email-verification-error' : ''}`}>
             {error || apiError}
+            {requiresEmailVerification && (
+              <div style={{marginTop: '0.5rem', fontSize: '0.9rem'}}>
+                <p>Please check your email inbox and click the verification link to activate your account.</p>
+                <p style={{color: '#666', fontSize: '0.8rem'}}>Didn't receive the email? Check your spam folder or contact support.</p>
+              </div>
+            )}
           </div>
         )}
 

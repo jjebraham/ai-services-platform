@@ -1,4 +1,5 @@
 // Supabase Configuration
+require('dotenv').config();
 const { createClient } = require('@supabase/supabase-js');
 
 class SupabaseConfig {
@@ -135,4 +136,7 @@ class SupabaseConfig {
   }
 }
 
-module.exports = new SupabaseConfig();
+// Create and export singleton instance
+const instance = new SupabaseConfig();
+instance.initialize(); // Auto-initialize when module is loaded
+module.exports = instance;

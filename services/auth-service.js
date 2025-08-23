@@ -8,125 +8,137 @@ class AuthService {
   }
 
   // Register new user
-  async register(userData) {
-    const { email, password, fullName, phoneNumber, googleId, profilePicture, isGoogleUser } = userData;
-
+  async register(email, password, fullName) {
     try {
+      console.log('🔐 Starting registration for:', email);
+      
       // Check if Supabase is configured
       if (!supabaseConfig.isConfigured()) {
+        console.error('❌ Supabase not configured');
         return { 
           success: false, 
           error: 'Database not configured. Please contact administrator.' 
         };
       }
 
-      // Get clients dynamically
       const supabase = supabaseConfig.getClient();
       const adminSupabase = supabaseConfig.getAdminClient();
-
-      if (!supabase) {
+      
+      if (!supabase || !adminSupabase) {
+        console.error('❌ Supabase clients not available');
         return { 
           success: false, 
           error: 'Database connection not available. Please contact administrator.' 
         };
       }
 
-      // Check if user already exists by email
-      const { data: existingUser } = await supabase
+      // Check if user already exists
+      const { data: existingUsers, error: checkError } = await adminSupabase
         .from('user_profiles')
         .select('email')
         .eq('email', email)
-        .single();
+        .limit(1);
 
-      if (existingUser) {
+      if (checkError) {
+        console.error('❌ Error checking existing user:', checkError);
+        return { success: false, error: 'Database error during user check' };
+      }
+
+      if (existingUsers && existingUsers.length > 0) {
+        console.log('❌ User already exists:', email);
         return { success: false, error: 'User already exists with this email' };
       }
 
-      // Check if phone number already exists
-      if (phoneNumber) {
-        const { data: existingPhone } = await supabase
-          .from('user_profiles')
-          .select('phone')
-          .eq('phone', phoneNumber)
-          .single();
+      // 1) Create user in Supabase Auth
+      console.log('📝 Creating user in Supabase Auth...');
+      console.log('📧 Email:', email);
+      console.log('🔑 Password length:', password.length);
+      console.log('👤 Full name:', fullName);
+      
+      const signUpData = {
+        email: email,
+        password: password
+      };
+      
+      console.log('📤 Sending to Supabase:', JSON.stringify(signUpData, null, 2));
+      
+      const { data: authData, error: authError } = await supabase.auth.signUp(signUpData);
 
-        if (existingPhone) {
-          return { success: false, error: 'User already exists with this phone number' };
-        }
+      if (authError) {
+        console.error('❌ Supabase Auth error:', authError);
+        return { success: false, error: authError.message || 'Registration failed' };
       }
 
-      let hashedPassword = null;
-      let authUser = null;
-
-      // Handle password hashing for non-Google users (store hash in our table)
-      if (!isGoogleUser && password) {
-        hashedPassword = await bcrypt.hash(password, 12);
+      const user = authData.user;
+      if (!user) {
+        console.error('❌ No user returned from Supabase Auth');
+        return { success: false, error: 'Failed to create user account' };
       }
 
-      // Generate email verification token
+      console.log('✅ User created in Supabase Auth:', user.id);
+
+      // 2) Generate verification code and token
+      const verificationCode = Math.floor(100000 + Math.random() * 900000).toString();
       const verificationToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-      const verificationCode = Math.floor(100000 + Math.random() * 900000).toString(); // 6-digit code
-      const verificationExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(); // 24 hours
+      const verificationExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
 
-      // Create user profile
+      // 3) Insert user profile (with service role key to bypass RLS)
+      console.log('👤 Creating user profile...');
       const profileData = {
-        email,
+        id: user.id,
+        email: email,
         full_name: fullName,
-        phone: phoneNumber || null,
-        is_active: false, // User starts as inactive until email verification
         role: 'user',
+        is_active: false, // User needs to verify email first
         email_verified: false,
-        verification_token: verificationToken,
         verification_code: verificationCode,
+        verification_token: verificationToken,
         verification_expiry: verificationExpiry,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        created_at: new Date().toISOString()
       };
 
-      // Add Google-specific fields if it's a Google user
-      if (isGoogleUser) {
-        profileData.google_id = googleId;
-        profileData.profile_picture = profilePicture;
-        profileData.is_google_user = true;
-      } else {
-        profileData.password_hash = hashedPassword;
-      }
-
-      const { data: profile, error: profileError } = await supabase
+      const { data: profile, error: profileError } = await adminSupabase
         .from('user_profiles')
         .insert([profileData])
-        .select('id,email,full_name,phone,role,is_active,profile_picture')
+        .select('id,email,role,is_active')
         .single();
 
       if (profileError) {
-        console.error('Profile creation error:', profileError);
+        console.error('❌ Profile creation error:', profileError);
+        // Try to clean up the auth user if profile creation fails
+        try {
+          await adminSupabase.auth.admin.deleteUser(user.id);
+          console.log('🧹 Cleaned up auth user after profile creation failure');
+        } catch (cleanupError) {
+          console.error('❌ Failed to cleanup auth user:', cleanupError);
+        }
         return { success: false, error: 'Failed to create user profile' };
       }
 
-      // Send verification email (for non-Google users)
-      if (!isGoogleUser) {
-        try {
-          await this.sendVerificationEmail(email, fullName, verificationCode, verificationToken);
-        } catch (emailError) {
-          console.error('Failed to send verification email:', emailError);
-          // Don't fail registration if email sending fails
-        }
+      // 4) Send verification email
+      console.log('📧 Sending verification email...');
+      const emailResult = await this.sendVerificationEmail(email, fullName, verificationCode, verificationToken);
+      
+      if (!emailResult.success && !emailResult.fallback) {
+        console.warn('⚠️ Failed to send verification email, but registration completed');
+      } else {
+        console.log('✅ Verification email sent successfully');
       }
 
+      console.log('✅ Registration completed successfully for:', email);
       return { 
         success: true, 
         user: {
           id: profile.id,
           email: profile.email,
-          fullName: profile.full_name,
-          phone: profile.phone,
+          fullName: fullName,
           role: profile.role,
-          emailVerified: profile.email_verified || isGoogleUser
+          emailVerified: false
         },
-        message: isGoogleUser ? 'Registration successful!' : 'Registration successful! Please check your email for verification.'
+        message: 'Registration successful! Please check your email for a verification code.'
       };
     } catch (error) {
-      console.error('Registration error:', error);
+      console.error('❌ Registration error:', error);
       return { success: false, error: 'Registration failed' };
     }
   }
@@ -345,6 +357,8 @@ class AuthService {
   // Login user
   async login(email, password) {
     try {
+      console.log('🔐 Login attempt for:', email);
+      
       // Check if Supabase is configured
       if (!supabaseConfig.isConfigured()) {
         return { 
@@ -354,55 +368,59 @@ class AuthService {
       }
 
       const supabase = supabaseConfig.getClient();
-      if (!supabase) {
+      const adminSupabase = supabaseConfig.getAdminClient();
+      
+      if (!supabase || !adminSupabase) {
         return { 
           success: false, 
           error: 'Database connection not available. Please contact administrator.' 
         };
       }
 
-      // Get user profile directly from our table
-      const { data: profile, error: profileError } = await supabase
+      // 1) Authenticate with Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email: email,
+        password: password
+      });
+
+      if (authError || !authData.user) {
+        console.error('❌ Supabase auth error:', authError?.message);
+        return { success: false, error: 'Invalid email or password' };
+      }
+
+      const user = authData.user;
+      console.log('✅ User authenticated:', user.id);
+
+      // 2) Fetch profile (using service role key if needed)
+      const { data: profile, error: profileError } = await adminSupabase
         .from('user_profiles')
-        .select('id,email,full_name,phone,role,password_hash,is_active,profile_picture,email_verified')
-        .eq('email', email)
+        .select('id, email, role, is_active, last_login')
+        .eq('id', user.id)
         .single();
 
       if (profileError || !profile) {
-        console.error('Profile fetch error:', profileError);
-        return { success: false, error: 'Invalid email or password' };
+        console.error('❌ Profile fetch error:', profileError);
+        return { success: false, error: 'User profile not found' };
       }
 
-      // Check if user is active
+      console.log('👤 Profile fetched:', profile.email);
+
+      // Check if account is active
       if (!profile.is_active) {
+        console.log('❌ Account inactive:', email);
         return { success: false, error: 'Account is deactivated' };
       }
 
-      // Check if email is verified
-      if (!profile.email_verified) {
-        return { 
-          success: false, 
-          error: 'Please verify your email address before logging in',
-          needsVerification: true,
-          email: profile.email
-        };
+      // Update last login
+      try {
+        await adminSupabase
+          .from('user_profiles')
+          .update({ last_login: new Date().toISOString() })
+          .eq('id', user.id);
+        console.log('✅ Last login updated');
+      } catch (updateError) {
+        console.warn('⚠️ Failed to update last login:', updateError);
       }
-
-      // Verify password using our stored hash
-      if (!profile.password_hash) {
-        return { success: false, error: 'Invalid email or password' };
-      }
-
-      const passwordValid = await bcrypt.compare(password, profile.password_hash);
-      if (!passwordValid) {
-        return { success: false, error: 'Invalid email or password' };
-      }
-
-      // Update last login time
-      await supabase
-        .from('user_profiles')
-        .update({ last_login: new Date().toISOString() })
-        .eq('id', profile.id);
 
       // Generate JWT token
       const token = this.generateToken({
@@ -411,20 +429,20 @@ class AuthService {
         role: profile.role
       });
 
+      console.log('✅ Login successful for:', email);
       return {
         success: true,
         token,
         user: {
           id: profile.id,
           email: profile.email,
-          fullName: profile.full_name,
-          phone: profile.phone,
-          role: profile.role,
-          profilePicture: profile.profile_picture
-        }
+          fullName: authData.user.user_metadata?.full_name || profile.email,
+          role: profile.role
+        },
+        profile: profile
       };
     } catch (error) {
-      console.error('Login error:', error);
+      console.error('❌ Login error:', error);
       return { success: false, error: 'Login failed' };
     }
   }

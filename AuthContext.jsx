@@ -116,6 +116,14 @@ export const AuthProvider = ({ children }) => {
           setIsAdmin(formattedUser.role === 'admin');
           return { success: true };
         } else {
+          // Handle email verification requirement
+          if (response.requiresEmailVerification) {
+            setError(response.error || 'Please verify your email address');
+            const verificationError = new Error(response.error || 'Please verify your email address');
+            verificationError.requiresEmailVerification = true;
+            throw verificationError;
+          }
+          
           setError(response.error || 'Login failed');
           throw new Error(response.error || 'Login failed');
         }
@@ -136,7 +144,12 @@ export const AuthProvider = ({ children }) => {
         const response = await authAPI.register(userData);
         
         if (response.success) {
-          return { success: true };
+          // Return the full response including user data
+          return {
+            success: true,
+            user: response.user,
+            message: response.message
+          };
         } else {
           setError(response.error || 'Registration failed');
           return { success: false, error: response.error || 'Registration failed' };
@@ -146,7 +159,12 @@ export const AuthProvider = ({ children }) => {
         const response = await authAPI.register(userData);
         
         if (response.success) {
-          return { success: true };
+          // Return the full response including user data
+          return {
+            success: true,
+            user: response.user,
+            message: response.message
+          };
         } else {
           setError(response.error || 'Registration failed');
           return { success: false, error: response.error || 'Registration failed' };

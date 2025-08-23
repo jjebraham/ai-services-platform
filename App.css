@@ -1499,6 +1499,20 @@ body.dark-theme .auth-button:hover {
   margin-top: 0.25rem;
 }
 
+.form-success {
+  color: #28a745;
+  font-size: 0.9rem;
+  margin-top: 0.5rem;
+  padding: 0.75rem;
+  background-color: #d4edda;
+  border: 1px solid #c3e6cb;
+  border-radius: 0.375rem;
+}
+
+.global-success {
+  margin-bottom: 1rem;
+}
+
 .password-strength {
   margin-top: 0.5rem;
 }

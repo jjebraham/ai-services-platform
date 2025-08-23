@@ -134,7 +134,12 @@ export const AuthProvider = ({ children }) => {
         const response = await authAPI.register(userData);
         
         if (response.success) {
-          return { success: true };
+          // Return the full response including user data
+          return {
+            success: true,
+            user: response.user,
+            message: response.message
+          };
         } else {
           setError(response.error || 'Registration failed');
           return { success: false, error: response.error || 'Registration failed' };

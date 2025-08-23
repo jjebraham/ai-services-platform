@@ -46,14 +46,15 @@ class AuthService {
       const saltRounds = 12;
       const hashedPassword = await bcrypt.hash(password, saltRounds);
 
-      // Create user in Supabase Auth
+      // Create user in Supabase Auth (without auto-confirmation)
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email,
         password,
         options: {
           data: {
             full_name: fullName
-          }
+          },
+          emailRedirectTo: `${process.env.FRONTEND_URL || 'http://localhost:3000'}/auth/callback`
         }
       });
 
@@ -87,6 +88,8 @@ class AuthService {
         return { success: false, error: profileError.message };
       }
 
+
+
       return {
         success: true,
         message: 'User registered successfully',
@@ -97,6 +100,7 @@ class AuthService {
           role: profileData.role
         }
       };
+    }
 
     } catch (error) {
       console.error('Registration error:', error);
@@ -150,6 +154,17 @@ class AuthService {
 
       if (authError) {
         return { success: false, error: authError.message };
+      }
+
+      // Check if email is verified
+      if (!authData.user.email_confirmed_at) {
+        // Sign out the user since email is not verified
+        await supabase.auth.signOut();
+        return { 
+          success: false, 
+          error: 'Please verify your email address before logging in. Check your inbox for a verification link.',
+          requiresEmailVerification: true
+        };
       }
 
       // Generate JWT token

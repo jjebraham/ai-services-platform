@@ -68,13 +68,14 @@ function RegisterPage() {
 
       const data = await response.json();
 
-      if (!response.ok) {
-        throw new Error(data.message || 'Registration failed');
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || data.message || 'Registration failed');
       }
 
-      // Auto-login after successful registration
-      login(data.user, data.token);
-      navigate('/dashboard');
+      // Show success message and ask user to check email
+      setErrors({ 
+        success: 'Registration successful! Please check your email to verify your account before logging in.' 
+      });
     } catch (error) {
       console.error('Registration Error:', error);
       setErrors({ submit: error.message });
@@ -148,6 +149,7 @@ function RegisterPage() {
         </div>
 
         {errors.submit && <div className="form-error global-error">{errors.submit}</div>}
+        {errors.success && <div className="form-success global-success">{errors.success}</div>}
 
         <form onSubmit={handleSubmit} className="register-form">
           <div className="name-row">

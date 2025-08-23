@@ -42,6 +42,7 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^5.2.1",
+    "@rollup/rollup-win32-x64-msvc": "^4.47.1",
     "@supabase/supabase-js": "^2.55.0",
     "axios": "^1.11.0",
     "bcryptjs": "^3.0.2",

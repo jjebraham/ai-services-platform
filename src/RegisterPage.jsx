@@ -91,27 +91,49 @@ function RegisterPage() {
   const onSubmit = async (data) => {
     try {
       clearError();
+      setApiError(null);
       const { confirmPassword, acceptTerms, acceptPrivacy, ...userData } = data;
       
-      const result = await registerUser(userData);
+      // Prepare the data with fullName for backend
+      const registrationData = {
+        email: userData.email,
+        password: userData.password,
+        fullName: `${userData.firstName} ${userData.lastName}`
+      };
       
-      if (result && result.user) {
+      console.log('🚀 Submitting registration:', registrationData);
+      
+      const result = await registerUser(registrationData);
+      
+      console.log('📥 Registration result:', result);
+      
+      // Only navigate if registration was actually successful
+      if (result && result.success === true) {
         toast.success(result.message || 'Account created successfully! Please check your email for verification.');
         
-        // For Google users, go directly to dashboard
-        if (result.user.emailVerified) {
+        // For Google users or verified users, go directly to dashboard
+        if (result.user && result.user.emailVerified) {
           navigate('/dashboard');
         } else {
           // For regular users, go to verification page
           navigate('/verify-email', { 
-            state: { email: result.user.email },
+            state: { email: result.user ? result.user.email : registrationData.email },
             replace: true 
           });
         }
+      } else {
+        // Registration failed - show error and don't navigate
+        const errorMessage = result?.error || 'Registration failed. Please try again.';
+        setApiError(errorMessage);
+        toast.error(errorMessage);
+        console.error('❌ Registration failed:', errorMessage);
       }
     } catch (error) {
-      // Error is handled by the auth context
-      console.error('Registration failed:', error);
+      // Handle network or other errors
+      const errorMessage = error.message || 'Registration failed. Please try again.';
+      setApiError(errorMessage);
+      toast.error(errorMessage);
+      console.error('💥 Registration error:', error);
     }
   };
 
@@ -236,6 +258,13 @@ function RegisterPage() {
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
+
+      {apiError && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>{apiError}</AlertDescription>
         </Alert>
       )}
 
