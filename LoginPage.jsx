@@ -73,6 +73,14 @@ function LoginPage() {
       const data = await response.json();
 
       if (response.ok && data.success) {
+        // Check if email verification is required
+        if (data.requiresVerification) {
+          setErrors({ 
+            submit: 'Please verify your email address before logging in. Check your inbox for a verification link.' 
+          });
+          return;
+        }
+
         // Backend authentication successful
         const userData = {
           id: data.user.id,
@@ -85,6 +93,14 @@ function LoginPage() {
         login(userData);
         navigate('/dashboard');
       } else {
+        // Check for specific error messages
+        if (data.message && data.message.includes('verify')) {
+          setErrors({ 
+            submit: data.message + ' Please check your inbox for a verification link.' 
+          });
+          return;
+        }
+
         // Backend authentication failed, check if it's a demo user
         const demoUsers = {
           'demo@aiservices.com': { password: 'demo123456', name: 'Demo User', role: 'user' },

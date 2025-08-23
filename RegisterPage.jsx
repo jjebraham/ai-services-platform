@@ -107,22 +107,44 @@ function RegisterPage() {
     setErrors({});
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Mock successful registration
-      const userData = {
-        id: Date.now(),
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        email: formData.email,
-        balance: 0
-      };
+      // Call registration API
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+          fullName: `${formData.firstName} ${formData.lastName}`
+        }),
+      });
 
-      login(userData);
-      navigate('/dashboard');
+      const data = await response.json();
+
+      if (data.success) {
+        if (data.requiresVerification) {
+          // Navigate to verification page with email
+          navigate('/verify-email', { 
+            state: { 
+              email: formData.email,
+              message: data.message 
+            } 
+          });
+        } else {
+          // Registration complete, navigate to login
+          navigate('/login', { 
+            state: { 
+              message: 'Registration successful! Please log in.' 
+            } 
+          });
+        }
+      } else {
+        setErrors({ submit: data.error || 'Registration failed. Please try again.' });
+      }
     } catch (error) {
-      setErrors({ submit: 'Registration failed. Please try again.' });
+      console.error('Registration error:', error);
+      setErrors({ submit: 'Registration failed. Please check your connection and try again.' });
     } finally {
       setIsLoading(false);
     }

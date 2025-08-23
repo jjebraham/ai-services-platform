@@ -1,6 +1,5 @@
 import React from 'react';
 import { Loader2 } from 'lucide-react';
-import { cn } from '@/lib/utils';
 
 function LoadingSpinner({ size = 'md', className, ...props }) {
   const sizeClasses = {
@@ -10,9 +9,11 @@ function LoadingSpinner({ size = 'md', className, ...props }) {
     xl: 'h-12 w-12',
   };
 
+  const combinedClassName = `animate-spin ${sizeClasses[size]} ${className || ''}`;
+
   return (
     <Loader2 
-      className={cn('animate-spin', sizeClasses[size], className)} 
+      className={combinedClassName} 
       {...props} 
     />
   );

@@ -62,7 +62,9 @@ settingsSchema.methods.decryptValue = function(encryptedValue) {
     decrypted += decipher.final('utf8');
     return JSON.parse(decrypted);
   } catch (error) {
-    throw new Error('Failed to decrypt value');
+    console.warn(`Failed to decrypt value for encrypted setting: ${error.message}`);
+    // Return empty string for corrupted encrypted values
+    return '';
   }
 };
 
@@ -88,7 +90,12 @@ settingsSchema.statics.getValue = async function(key, defaultValue = null) {
   if (!setting) return defaultValue;
   
   if (setting.type === 'encrypted') {
-    return setting.decryptedValue;
+    try {
+      return setting.decryptedValue;
+    } catch (error) {
+      console.warn(`Failed to decrypt setting '${key}': ${error.message}`);
+      return defaultValue;
+    }
   }
   return setting.value;
 };

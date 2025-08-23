@@ -108,8 +108,8 @@ function VerifyEmailPage() {
 
   if (status === 'loading' || isVerifying) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <div className="container mx-auto px-4 py-16">
+      <div className="bg-gray-50 py-16">
+        <div className="container mx-auto px-4">
           <div className="max-w-md mx-auto bg-white rounded-lg shadow-md p-8">
             <div className="space-y-6 text-center">
               <LoadingSpinner />
@@ -126,8 +126,8 @@ function VerifyEmailPage() {
 
   if (status === 'success') {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <div className="container mx-auto px-4 py-16">
+      <div className="bg-gray-50 py-16">
+        <div className="container mx-auto px-4">
           <div className="max-w-md mx-auto bg-white rounded-lg shadow-md p-8">
             <div className="space-y-6 text-center">
               <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
@@ -154,8 +154,8 @@ function VerifyEmailPage() {
 
   if (status === 'error') {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <div className="container mx-auto px-4 py-16">
+      <div className="bg-gray-50 py-16">
+        <div className="container mx-auto px-4">
           <div className="max-w-md mx-auto bg-white rounded-lg shadow-md p-8">
             <div className="space-y-6 text-center">
               <div className="mx-auto w-16 h-16 bg-red-100 rounded-full flex items-center justify-center">
@@ -200,8 +200,8 @@ function VerifyEmailPage() {
 
   // Default input state for 6-digit code
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto px-4 py-16">
+    <div className="bg-gray-50 py-16">
+      <div className="container mx-auto px-4">
         <div className="max-w-md mx-auto bg-white rounded-lg shadow-md p-8">
           <div className="space-y-6 text-center">
             <div className="mx-auto w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">

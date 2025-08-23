@@ -5,6 +5,7 @@ import Navigation from './Navigation';
 import HomePage from './HomePage';
 import LoginPage from './LoginPage';
 import RegisterPage from './RegisterPage';
+import VerifyEmailPage from './VerifyEmailPage';
 import DashboardPage from './DashboardPage';
 import ServicesPage from './ServicesPage';
 import ServiceDetailPage from './ServiceDetailPage';
@@ -56,6 +57,10 @@ function App() {
                   <RegisterPage />
                 </PublicRoute>
               } 
+            />
+            <Route 
+              path="/verify-email" 
+              element={<VerifyEmailPage />} 
             />
             
             {/* Protected Routes (require authentication) */}

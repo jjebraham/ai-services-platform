@@ -49,6 +49,39 @@ class AuthService {
         return { success: false, error: authError.message };
       }
 
+      // Create user profile record in Supabase database using admin client
+      if (authData.user) {
+        try {
+          // Use admin client to bypass RLS policies
+          const adminClient = supabaseConfig.getAdminClient();
+          if (adminClient) {
+            const { error: profileError } = await adminClient
+              .from('user_profiles')
+              .insert([
+                {
+                  id: authData.user.id,
+                  email: authData.user.email,
+                  full_name: fullName,
+                  role: 'user',
+                  is_active: true,
+                  created_at: new Date().toISOString(),
+                  updated_at: new Date().toISOString()
+                }
+              ]);
+
+            if (profileError) {
+              console.error('Error creating user profile:', profileError);
+              // Continue anyway - the auth user was created successfully
+            }
+          } else {
+            console.error('Admin client not available for profile creation');
+          }
+        } catch (profileErr) {
+          console.error('Error creating user profile:', profileErr);
+          // Continue anyway - the auth user was created successfully
+        }
+      }
+
       // Check if email confirmation is required
       if (authData.user && !authData.user.email_confirmed_at) {
         return {

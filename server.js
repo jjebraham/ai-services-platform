@@ -30,9 +30,11 @@ const { notFound } = require('./notFound');
 const authRoutes = require('./routes/auth-routes');
 const orderRoutes = require('./routes/orders');
 const adminRoutes = require('./routes/admin-routes');
+const syncRoutes = require('./routes/sync-routes');
 
 // Import utilities
 const { initializeApp } = require('./initialize');
+const syncScheduler = require('./services/sync-scheduler');
 
 const app = express();
 
@@ -141,10 +143,11 @@ app.get('/health', (req, res) => {
   });
 });
 
-// API routes
+// Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/sync', syncRoutes);
 
 // Serve frontend in production
 if (process.env.NODE_ENV === 'production') {
@@ -172,6 +175,14 @@ const server = app.listen(PORT, HOST, async () => {
   } catch (error) {
     console.error('Failed to initialize application:', error);
   }
+  
+  // Start data synchronization scheduler
+  try {
+    syncScheduler.start(1); // Sync every 1 minute
+    console.log('Data synchronization scheduler started');
+  } catch (error) {
+    console.error('Failed to start sync scheduler:', error);
+  }
 });
 
 // Handle unhandled promise rejections
@@ -192,6 +203,15 @@ process.on('uncaughtException', (err) => {
 // Graceful shutdown
 process.on('SIGTERM', () => {
   console.log('SIGTERM received. Shutting down gracefully...');
+  
+  // Stop sync scheduler
+  try {
+    syncScheduler.stop();
+    console.log('Sync scheduler stopped');
+  } catch (error) {
+    console.error('Error stopping sync scheduler:', error);
+  }
+  
   server.close(() => {
     console.log('Process terminated');
   });
