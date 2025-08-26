@@ -7,6 +7,8 @@ import LoginPage from './LoginPage';
 import RegisterPage from './RegisterPage';
 import VerifyEmailPage from './VerifyEmailPage';
 import DashboardPage from './DashboardPage';
+import ForgotPasswordPage from './ForgotPasswordPage';
+import ResetPasswordPage from './ResetPasswordPage';
 import ServicesPage from './ServicesPage';
 import ServiceDetailPage from './ServiceDetailPage';
 import AdminRoute from './AdminRoute';
@@ -58,9 +60,25 @@ function App() {
                 </PublicRoute>
               } 
             />
-            <Route 
-              path="/verify-email" 
-              element={<VerifyEmailPage />} 
+            <Route
+              path="/verify-email"
+              element={<VerifyEmailPage />}
+            />
+            <Route
+              path="/forgot-password"
+              element={
+                <PublicRoute>
+                  <ForgotPasswordPage />
+                </PublicRoute>
+              }
+            />
+            <Route
+              path="/reset-password"
+              element={
+                <PublicRoute>
+                  <ResetPasswordPage />
+                </PublicRoute>
+              }
             />
             
             {/* Protected Routes (require authentication) */}

@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { authAPI } from './api';
 
 const AuthContext = createContext();
 
@@ -15,6 +16,7 @@ export const AuthProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [user, setUser] = useState(null);
   const [isAdmin, setIsAdmin] = useState(false);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     // Check if user is logged in on app start
@@ -107,14 +109,42 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const clearError = () => setError(null);
+
+  const forgotPassword = async (email) => {
+    try {
+      setError(null);
+      await authAPI.forgotPassword(email);
+      return true;
+    } catch (err) {
+      setError(err.message || 'Failed to send reset link');
+      throw err;
+    }
+  };
+
+  const resetPassword = async (token, password) => {
+    try {
+      setError(null);
+      await authAPI.resetPassword(token, password);
+      return true;
+    } catch (err) {
+      setError(err.message || 'Failed to reset password');
+      throw err;
+    }
+  };
+
   const value = {
     isAuthenticated,
     isLoading,
     user,
     isAdmin,
+    error,
+    clearError,
     login,
     register,
     logout,
+    forgotPassword,
+    resetPassword,
     checkAuthStatus,
   };
 
