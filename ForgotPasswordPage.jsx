@@ -3,14 +3,14 @@ import { Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useAuth } from '../../contexts/AuthContext';
+import { useAuth } from './AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Mail, ArrowLeft, AlertCircle, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
-import LoadingSpinner from '../../components/LoadingSpinner';
+import LoadingSpinner from './LoadingSpinner';
 
 // Validation schema
 const forgotPasswordSchema = z.object({
@@ -51,11 +51,11 @@ function ForgotPasswordPage() {
         <div className="mx-auto w-16 h-16 bg-green-100 rounded-full flex items-center justify-center">
           <CheckCircle className="h-8 w-8 text-green-600" />
         </div>
-        
+
         <div className="space-y-2">
-          <h1 className="text-3xl font-bold">Check your email</h1>
+          <h1 className="text-3xl font-bold">Reset link sent</h1>
           <p className="text-muted-foreground">
-            We've sent a password reset link to{' '}
+            Your reset password link has been sent to{' '}
             <span className="font-medium">{getValues('email')}</span>
           </p>
         </div>
@@ -76,7 +76,7 @@ function ForgotPasswordPage() {
             Try different email
           </Button>
           
-          <Link to="/auth/login">
+          <Link to="/login">
             <Button variant="ghost" className="w-full">
               <ArrowLeft className="mr-2 h-4 w-4" />
               Back to sign in
@@ -134,14 +134,14 @@ function ForgotPasswordPage() {
               Sending reset link...
             </>
           ) : (
-            'Send reset link'
+            'Reset password'
           )}
         </Button>
       </form>
 
       {/* Back to Login */}
       <div className="text-center">
-        <Link to="/auth/login">
+        <Link to="/login">
           <Button variant="ghost" className="w-full">
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back to sign in

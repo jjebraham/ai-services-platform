@@ -1,6 +1,7 @@
 const supabaseConfig = require('../supabase-config');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const sgMail = require('@sendgrid/mail');
 
 class AuthService {
   constructor() {
@@ -376,6 +377,99 @@ class AuthService {
     } catch (error) {
       console.error('Update profile error:', error);
       return { success: false, error: 'Failed to update profile' };
+    }
+  }
+
+  // Send password reset email
+  async forgotPassword(email) {
+    try {
+      if (!supabaseConfig.isConfigured()) {
+        return {
+          success: false,
+          error: 'Database not configured. Please contact administrator.'
+        };
+      }
+
+      const supabase = supabaseConfig.getClient();
+
+      if (!supabase) {
+        return {
+          success: false,
+          error: 'Database connection not available. Please contact administrator.'
+        };
+      }
+
+      const { data, error } = await supabase.auth.admin.listUsers({ email });
+      if (error || !data || !data.users || data.users.length === 0) {
+        // For security, don't reveal whether the email exists
+        return { success: true, message: 'If that email exists, a reset link has been sent.' };
+      }
+
+      const user = data.users[0];
+
+      const token = jwt.sign(
+        { userId: user.id },
+        process.env.JWT_RESET_SECRET || 'reset-secret',
+        { expiresIn: '1h' }
+      );
+
+      if (!process.env.SENDGRID_API_KEY) {
+        return { success: false, error: 'Email service not configured' };
+      }
+
+      sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+      const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password?token=${token}`;
+
+      await sgMail.send({
+        to: email,
+        from: process.env.EMAIL_FROM || 'noreply@kiani.exchange',
+        subject: 'Password Reset Request',
+        text: `Reset your password using the following link: ${resetUrl}`,
+        html: `<p>Reset your password using the link below:</p><p><a href="${resetUrl}">${resetUrl}</a></p>`
+      });
+
+      return { success: true, message: 'Password reset email sent' };
+    } catch (err) {
+      console.error('Forgot password error:', err);
+      return { success: false, error: 'Failed to send reset email' };
+    }
+  }
+
+  // Reset password using token
+  async resetPassword(token, password) {
+    try {
+      const decoded = jwt.verify(
+        token,
+        process.env.JWT_RESET_SECRET || 'reset-secret'
+      );
+
+      if (!supabaseConfig.isConfigured()) {
+        return {
+          success: false,
+          error: 'Database not configured. Please contact administrator.'
+        };
+      }
+
+      const adminClient = supabaseConfig.getAdminClient();
+      if (!adminClient) {
+        return {
+          success: false,
+          error: 'Database connection not available. Please contact administrator.'
+        };
+      }
+
+      const { error } = await adminClient.auth.admin.updateUserById(decoded.userId, {
+        password
+      });
+
+      if (error) {
+        return { success: false, error: error.message };
+      }
+
+      return { success: true, message: 'Password updated successfully' };
+    } catch (err) {
+      console.error('Reset password error:', err);
+      return { success: false, error: 'Invalid or expired token' };
     }
   }
 
