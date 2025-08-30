@@ -6,12 +6,13 @@ import HomePage from './HomePage';
 import LoginPage from './LoginPage';
 import RegisterPage from './RegisterPage';
 import VerifyEmailPage from './VerifyEmailPage';
+import ResetPasswordPage from './ResetPasswordPage';
 import DashboardPage from './DashboardPage';
 import ServicesPage from './ServicesPage';
 import ServiceDetailPage from './ServiceDetailPage';
-import AdminRoute from './AdminRoute';
+import EmailVerifiedPage from './EmailVerifiedPage';
+import ForgotPasswordPage from './ForgotPasswordPage';
 import AdminDashboard from './AdminDashboard';
-import AdminServices from './AdminServices';
 import AdminUsers from './AdminUsers';
 import AdminSettings from './AdminSettings';
 import ErrorBoundary from './ErrorBoundary';
@@ -62,7 +63,10 @@ function App() {
               path="/verify-email" 
               element={<VerifyEmailPage />} 
             />
-            
+            <Route path="/reset-password" element={<PublicRoute><ResetPasswordPage /></PublicRoute>} />
+            <Route path="/email-verified" element={<EmailVerifiedPage />} />
+            <Route path="/forgot-password" element={<PublicRoute><ForgotPasswordPage /></PublicRoute>} />
+
             {/* Protected Routes (require authentication) */}
             <Route 
               path="/dashboard" 

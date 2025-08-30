@@ -52,12 +52,14 @@ class AuthService {
       // Create user profile record in Supabase database using admin client
       if (authData.user) {
         try {
-          // Use admin client to bypass RLS policies
           const adminClient = supabaseConfig.getAdminClient();
-          if (adminClient) {
+          if (!adminClient) {
+            console.warn('Admin client not available for profile upsert');
+          } else {
+            // Upsert the profile record, which will reference the auth user
             const { error: profileError } = await adminClient
               .from('user_profiles')
-              .insert([
+              .upsert([
                 {
                   id: authData.user.id,
                   email: authData.user.email,
@@ -68,13 +70,10 @@ class AuthService {
                   updated_at: new Date().toISOString()
                 }
               ]);
-
             if (profileError) {
-              console.error('Error creating user profile:', profileError);
+              console.error('Error upserting user profile:', profileError);
               // Continue anyway - the auth user was created successfully
             }
-          } else {
-            console.error('Admin client not available for profile creation');
           }
         } catch (profileErr) {
           console.error('Error creating user profile:', profileErr);
@@ -397,6 +396,111 @@ class AuthService {
     } catch (error) {
       console.error('Logout error:', error);
       return { success: false, error: 'Logout failed' };
+    }
+  }
+
+  // Request password reset (Supabase email flow)
+  async requestPasswordReset(email) {
+    try {
+      if (!supabaseConfig.isConfigured()) {
+        return { 
+          success: false, 
+          error: 'Database not configured. Please contact administrator.' 
+        };
+      }
+
+      const supabase = supabaseConfig.getClient();
+
+      if (!supabase) {
+        return { 
+          success: false, 
+          error: 'Database connection not available. Please contact administrator.' 
+        };
+      }
+
+      const redirectTo = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password`;
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo
+      });
+
+      if (error) {
+        // Common Supabase error when redirect URL is not whitelisted
+        if (/redirect.*not.*allowed|not.*whitelisted/i.test(error.message)) {
+          return { success: false, error: 'Reset link redirect URL is not allowed in Supabase settings. Please add your FRONTEND_URL to Supabase Auth Redirect URLs.' };
+        }
+        return { success: false, error: error.message };
+      }
+
+      return {
+        success: true,
+        message: 'Password reset instructions have been sent to your email.'
+      };
+
+    } catch (error) {
+      console.error('Password reset request error:', error);
+      return { success: false, error: 'Failed to request password reset. Please try again.' };
+    }
+  }
+
+  // Reset password using token from email (server-side exchange + update)
+  async resetPassword(token, newPassword) {
+    try {
+      if (!supabaseConfig.isConfigured()) {
+        return { 
+          success: false, 
+          error: 'Database not configured. Please contact administrator.' 
+        };
+      }
+
+      const supabase = supabaseConfig.getClient();
+
+      if (!supabase) {
+        return { 
+          success: false, 
+          error: 'Database connection not available. Please contact administrator.' 
+        };
+      }
+
+      // Exchange the token from the email link for a session, then update password
+      // Note: FRONTEND must pass the `token` (code) it received in the reset link
+      try {
+        if (!token) {
+          return { success: false, error: 'Reset token is required' };
+        }
+        if (!newPassword || newPassword.length < 6) {
+          return { success: false, error: 'Password must be at least 6 characters long' };
+        }
+
+        if (typeof supabase.auth.exchangeCodeForSession === 'function') {
+          const { error: exchangeError } = await supabase.auth.exchangeCodeForSession({ code: token });
+          if (exchangeError) {
+            return { success: false, error: `Invalid or expired reset token` };
+          }
+        } else {
+          console.warn('exchangeCodeForSession not available in current supabase-js. Ensure frontend uses Supabase client to establish recovery session.');
+        }
+
+        const { error } = await supabase.auth.updateUser({ password: newPassword });
+        if (error) {
+          return { success: false, error: error.message };
+        }
+      } catch (e) {
+        console.error('Reset password flow error:', e);
+        return { success: false, error: 'Failed to reset password. Token may be invalid or expired.' };
+      }
+
+      if (error) {
+        return { success: false, error: error.message };
+      }
+
+      return {
+        success: true,
+        message: 'Password has been reset successfully. You can now log in with your new password.'
+      };
+
+    } catch (error) {
+      console.error('Password reset error:', error);
+      return { success: false, error: 'Failed to reset password. Please try again.' };
     }
   }
 }
